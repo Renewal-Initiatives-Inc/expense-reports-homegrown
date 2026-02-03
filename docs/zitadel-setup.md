@@ -27,7 +27,7 @@ Add the following redirect URIs:
 
 ### Production
 
-- `https://[your-production-domain]/api/auth/callback/zitadel`
+- `https://expenses.renewalinitiatives.org/api/auth/callback/zitadel`
 
 ### Post-Logout URIs (optional)
 

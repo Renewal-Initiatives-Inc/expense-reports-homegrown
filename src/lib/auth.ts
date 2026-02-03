@@ -64,7 +64,11 @@ export const authConfig: NextAuthConfig = {
       type: 'oidc',
       issuer: process.env.AUTH_ZITADEL_ISSUER,
       clientId: process.env.AUTH_ZITADEL_CLIENT_ID,
-      clientSecret: process.env.AUTH_ZITADEL_CLIENT_SECRET,
+      // Using PKCE instead of client secret (Zitadel recommended)
+      client: {
+        token_endpoint_auth_method: 'none',
+      },
+      checks: ['pkce', 'state'],
       authorization: {
         params: {
           scope: 'openid email profile urn:zitadel:iam:org:project:id:zitadel:aud',
