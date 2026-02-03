@@ -12,9 +12,15 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', testId: 'nav-dashboard' },
-  // Additional nav items will be added in future phases
-  // { href: '/reports', label: 'Reports', testId: 'nav-reports' },
+  { href: '/reports', label: 'My Reports', testId: 'nav-reports' },
 ]
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === '/') {
+    return pathname === '/'
+  }
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
 
 export function Nav() {
   const pathname = usePathname()
@@ -28,7 +34,7 @@ export function Nav() {
           data-testid={item.testId}
           className={cn(
             'text-sm font-medium transition-colors hover:text-primary',
-            pathname === item.href ? 'text-primary' : 'text-muted-foreground'
+            isActive(pathname, item.href) ? 'text-primary' : 'text-muted-foreground'
           )}
         >
           {item.label}

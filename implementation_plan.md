@@ -78,7 +78,7 @@
 4. Store receipt images in Vercel Blob
 5. Generate and store receipt thumbnails
 6. Build expense line item display with receipt thumbnail
-7. Create category dropdown (hardcoded initially, QBO in Phase 6)
+7. Create category dropdown (hardcoded initially, QBO in Phase 7)
 8. Implement required field validation (amount, date, category)
 9. Implement optional fields (merchant, memo, project, billable)
 10. Show/hide billable checkbox based on project selection
@@ -121,7 +121,7 @@
 2. Create camera preview component
 3. Build capture button with visual feedback
 4. Integrate with existing receipt processing flow
-5. Create "Add another?" / "Done" flow after capture
+5. Create "Add another?" or automatic progression / "Done" flow after capture
 6. Handle camera permission denial gracefully
 7. Provide fallback to file upload
 8. Test across browsers (Chrome, Firefox, Safari)
