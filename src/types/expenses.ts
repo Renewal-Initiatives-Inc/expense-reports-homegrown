@@ -40,6 +40,8 @@ export interface CreateExpenseInput {
   originAddress?: string
   destinationAddress?: string
   miles?: string
+  // AI confidence for receipt extraction
+  aiConfidence?: Record<string, number>
 }
 
 export interface UpdateExpenseInput {
@@ -58,4 +60,6 @@ export interface UpdateExpenseInput {
   originAddress?: string
   destinationAddress?: string
   miles?: string
+  // AI confidence for receipt extraction
+  aiConfidence?: Record<string, number>
 }

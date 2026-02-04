@@ -63,6 +63,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       if (data.categoryName !== undefined) updateInput.categoryName = data.categoryName
       if (data.receiptUrl !== undefined) updateInput.receiptUrl = data.receiptUrl
       if (data.receiptThumbnailUrl !== undefined) updateInput.receiptThumbnailUrl = data.receiptThumbnailUrl
+      if (data.aiConfidence !== undefined) updateInput.aiConfidence = data.aiConfidence
     } else if (data.type === 'mileage') {
       if (data.amount !== undefined) updateInput.amount = data.amount.toFixed(2)
       if (data.originAddress !== undefined) updateInput.originAddress = data.originAddress

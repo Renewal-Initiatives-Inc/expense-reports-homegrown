@@ -1,16 +1,18 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { ConfidenceIndicator, hasLowConfidenceFields } from '@/components/ui/confidence-indicator'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useCategories } from '@/hooks/use-categories'
 import { useProjects } from '@/hooks/use-projects'
+import { useReceiptProcessing } from '@/hooks/use-receipt-processing'
 import type { Expense } from '@/types/expenses'
-import { Loader2 } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Loader2, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { ReceiptUpload } from './receipt-upload'
 
@@ -26,6 +28,7 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
   const [isPending, startTransition] = useTransition()
   const { categories, isLoading: categoriesLoading } = useCategories()
   const { projects, isLoading: projectsLoading } = useProjects()
+  const { processReceipt, isProcessing, result: extractionResult, error: extractionError, errorCode, reset: resetExtraction } = useReceiptProcessing()
 
   const isEditMode = !!expense
 
@@ -39,6 +42,52 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
   const [billable, setBillable] = useState(expense?.billable || false)
   const [receiptUrl, setReceiptUrl] = useState<string | null>(expense?.receiptUrl || null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // AI confidence tracking
+  const [aiConfidence, setAiConfidence] = useState<Record<string, number> | null>(
+    expense?.aiConfidence as Record<string, number> | null
+  )
+
+  // Apply extraction results when they arrive
+  useEffect(() => {
+    if (extractionResult) {
+      // Populate form with extracted data
+      if (extractionResult.amount) {
+        setAmount(extractionResult.amount)
+      }
+      if (extractionResult.date) {
+        setDate(extractionResult.date)
+      }
+      if (extractionResult.merchant) {
+        setMerchant(extractionResult.merchant)
+      }
+      if (extractionResult.suggestedCategoryId) {
+        setCategoryId(extractionResult.suggestedCategoryId)
+      }
+      if (extractionResult.memo) {
+        setMemo(extractionResult.memo)
+      }
+
+      // Store confidence scores
+      setAiConfidence(extractionResult.confidence)
+
+      toast.success('Receipt data extracted - please review the fields')
+    }
+  }, [extractionResult])
+
+  const handleProcessReceipt = async () => {
+    if (!receiptUrl) return
+    await processReceipt(receiptUrl)
+  }
+
+  const handleRetry = () => {
+    resetExtraction()
+    if (receiptUrl) {
+      processReceipt(receiptUrl)
+    }
+  }
+
+  const showLowConfidenceWarning = aiConfidence && hasLowConfidenceFields(aiConfidence)
 
   const selectedCategory = categories.find((c) => c.id === categoryId)
   const selectedProject = projects.find((p) => p.id === projectId)
@@ -90,6 +139,7 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
           billable: projectId ? billable : false,
           receiptUrl: receiptUrl || undefined,
           receiptThumbnailUrl: receiptUrl || undefined,
+          aiConfidence: aiConfidence || undefined,
         }
 
         const url = isEditMode ? `/api/reports/${reportId}/expenses/${expense.id}` : `/api/reports/${reportId}/expenses`
@@ -137,17 +187,91 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" data-testid="expense-form">
+    <form onSubmit={handleSubmit} className="space-y-6 relative" data-testid="expense-form">
+      {/* Processing Overlay */}
+      {isProcessing && (
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg z-10" data-testid="processing-overlay">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+            <p className="text-sm text-muted-foreground">Analyzing receipt...</p>
+            <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
+          </div>
+        </div>
+      )}
+
+      {/* Low Confidence Warning Banner */}
+      {showLowConfidenceWarning && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4" data-testid="low-confidence-warning">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Review Required</h4>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                Some fields were extracted with low confidence. Please verify the highlighted values are correct before saving.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Extraction Error Banner */}
+      {extractionError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4" data-testid="extraction-error">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-red-800 dark:text-red-200">Could not read receipt</h4>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                {errorCode === 'UNREADABLE'
+                  ? "The receipt image couldn't be processed. You can enter the details manually below."
+                  : errorCode === 'TIMEOUT'
+                    ? 'Processing took too long. Please try again or enter details manually.'
+                    : errorCode === 'NO_API_KEY'
+                      ? 'Receipt processing is not configured. Please contact your administrator.'
+                      : 'An error occurred. Please try again or enter details manually.'}
+              </p>
+              {errorCode !== 'NO_API_KEY' && (
+                <Button type="button" variant="outline" size="sm" onClick={handleRetry} className="mt-2" data-testid="retry-extraction">
+                  Try Again
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Receipt Upload */}
       <div className="space-y-2">
         <Label>Receipt Image</Label>
-        <ReceiptUpload value={receiptUrl} onChange={setReceiptUrl} disabled={isPending} />
+        <ReceiptUpload value={receiptUrl} onChange={setReceiptUrl} disabled={isPending || isProcessing} />
+
+        {/* Process Receipt Button */}
+        {receiptUrl && !isProcessing && (
+          <div className="flex items-center gap-2 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleProcessReceipt}
+              disabled={isPending}
+              data-testid="process-receipt-button"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Extract from Receipt
+            </Button>
+            {extractionResult && (
+              <span className="text-sm text-muted-foreground">
+                Data extracted - review and edit as needed
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Amount */}
       <div className="space-y-2">
         <Label htmlFor="amount">
           Amount <span className="text-destructive">*</span>
+          {aiConfidence?.amount !== undefined && <ConfidenceIndicator confidence={aiConfidence.amount} />}
         </Label>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -170,6 +294,7 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
       <div className="space-y-2">
         <Label htmlFor="date">
           Date <span className="text-destructive">*</span>
+          {aiConfidence?.date !== undefined && <ConfidenceIndicator confidence={aiConfidence.date} />}
         </Label>
         <Input
           id="date"
@@ -186,6 +311,7 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
       <div className="space-y-2">
         <Label htmlFor="category">
           Category <span className="text-destructive">*</span>
+          {aiConfidence?.category !== undefined && <ConfidenceIndicator confidence={aiConfidence.category} />}
         </Label>
         <Select value={categoryId} onValueChange={setCategoryId} disabled={isPending}>
           <SelectTrigger className="w-full" data-testid="expense-category">
@@ -204,7 +330,10 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
 
       {/* Merchant */}
       <div className="space-y-2">
-        <Label htmlFor="merchant">Merchant</Label>
+        <Label htmlFor="merchant">
+          Merchant
+          {aiConfidence?.merchant !== undefined && <ConfidenceIndicator confidence={aiConfidence.merchant} />}
+        </Label>
         <Input
           id="merchant"
           type="text"

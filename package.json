@@ -19,6 +19,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.1",
     "@neondatabase/serverless": "^1.0.2",
     "@vercel/blob": "^2.0.1",
     "class-variance-authority": "^0.7.1",

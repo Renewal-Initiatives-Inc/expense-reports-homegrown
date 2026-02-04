@@ -88,6 +88,8 @@ export async function createExpense(
       originAddress: input.originAddress || null,
       destinationAddress: input.destinationAddress || null,
       miles: input.miles || null,
+      // AI confidence for receipt extraction
+      aiConfidence: input.aiConfidence || null,
     })
     .returning()
 
@@ -141,6 +143,8 @@ export async function updateExpense(id: string, userId: string, input: UpdateExp
   if (input.originAddress !== undefined) updateData.originAddress = input.originAddress
   if (input.destinationAddress !== undefined) updateData.destinationAddress = input.destinationAddress
   if (input.miles !== undefined) updateData.miles = input.miles
+  // AI confidence for receipt extraction
+  if (input.aiConfidence !== undefined) updateData.aiConfidence = input.aiConfidence
 
   const results = await db.update(expenses).set(updateData).where(eq(expenses.id, id)).returning()
 

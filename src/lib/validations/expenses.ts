@@ -41,6 +41,16 @@ export const createMileageExpenseSchema = z
   })
   .refine(billableRequiresProject, billableRequiresProjectMessage)
 
+// AI confidence schema for receipt extraction results
+const aiConfidenceSchema = z
+  .object({
+    merchant: z.number().min(0).max(1).optional(),
+    amount: z.number().min(0).max(1).optional(),
+    date: z.number().min(0).max(1).optional(),
+    category: z.number().min(0).max(1).optional(),
+  })
+  .optional()
+
 /**
  * Schema for creating a new out-of-pocket expense.
  * Required fields per R3.10: amount, date, category
@@ -59,6 +69,7 @@ export const createOutOfPocketExpenseSchema = z
     categoryName: z.string().min(1, 'Category name is required'),
     receiptUrl: z.string().url('Invalid receipt URL').optional(),
     receiptThumbnailUrl: z.string().url('Invalid thumbnail URL').optional(),
+    aiConfidence: aiConfidenceSchema,
   })
   .refine(billableRequiresProject, billableRequiresProjectMessage)
 
@@ -126,6 +137,7 @@ export const updateOutOfPocketExpenseSchema = z
     billable: z.boolean().optional(),
     receiptUrl: z.string().url('Invalid receipt URL').nullable().optional(),
     receiptThumbnailUrl: z.string().url('Invalid thumbnail URL').nullable().optional(),
+    aiConfidence: aiConfidenceSchema,
   })
   .refine(
     (data) => {

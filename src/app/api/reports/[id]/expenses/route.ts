@@ -81,6 +81,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         billable: data.billable,
         receiptUrl: data.receiptUrl,
         receiptThumbnailUrl: data.receiptThumbnailUrl,
+        aiConfidence: data.aiConfidence,
       }
     }
 
