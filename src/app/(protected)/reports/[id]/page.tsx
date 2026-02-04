@@ -1,4 +1,6 @@
 import { ExpensesSection } from '@/components/expenses/expenses-section'
+import { ReopenReportButton } from '@/components/reports/reopen-report-button'
+import { SubmitReportButton } from '@/components/reports/submit-report-button'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
@@ -58,8 +60,10 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
               </Link>
             </Button>
             <ReportDeleteButton report={report} />
+            <SubmitReportButton reportId={report.id} reportName={report.name} />
           </div>
         )}
+        {report.status === 'rejected' && <ReopenReportButton reportId={report.id} reportName={report.name} />}
       </div>
 
       {report.status === 'rejected' && report.reviewerComment && (

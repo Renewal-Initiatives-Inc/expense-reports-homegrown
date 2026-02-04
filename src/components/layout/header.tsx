@@ -2,6 +2,7 @@
 
 import { Nav } from '@/components/layout/nav'
 import { UserMenu } from '@/components/layout/user-menu'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import type { AppRole } from '@/lib/auth'
 import { FileText } from 'lucide-react'
 import Link from 'next/link'
@@ -29,8 +30,11 @@ export function Header({ user }: HeaderProps) {
         <div className="flex flex-1 items-center justify-between">
           <Nav userRole={user.role} />
 
-          {/* User Menu */}
-          <UserMenu user={user} />
+          {/* Notifications and User Menu */}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <UserMenu user={user} />
+          </div>
         </div>
       </div>
     </header>

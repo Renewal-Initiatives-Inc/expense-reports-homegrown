@@ -103,15 +103,15 @@ export default async function DashboardPage() {
                 View All Reports ({totalReports})
               </Link>
             </Button>
-            {session.user.role === 'admin' && pendingApprovalCount > 0 && (
-              <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-950/30">
-                <p className="font-medium text-orange-700 dark:text-orange-400">
-                  {pendingApprovalCount} report{pendingApprovalCount !== 1 ? 's' : ''} pending approval
-                </p>
-                <p className="text-sm text-orange-600 dark:text-orange-500">
-                  Review functionality coming in a future phase.
-                </p>
-              </div>
+            {session.user.role === 'admin' && (
+              <Button variant={pendingApprovalCount > 0 ? 'default' : 'outline'} asChild data-testid="view-approvals-action">
+                <Link href="/admin/approvals">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  {pendingApprovalCount > 0
+                    ? `Review ${pendingApprovalCount} Pending Report${pendingApprovalCount !== 1 ? 's' : ''}`
+                    : 'View Approval Queue'}
+                </Link>
+              </Button>
             )}
           </CardContent>
         </Card>
