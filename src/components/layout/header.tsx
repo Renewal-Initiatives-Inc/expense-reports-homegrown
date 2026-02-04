@@ -27,7 +27,7 @@ export function Header({ user }: HeaderProps) {
 
         {/* Navigation */}
         <div className="flex flex-1 items-center justify-between">
-          <Nav />
+          <Nav userRole={user.role} />
 
           {/* User Menu */}
           <UserMenu user={user} />

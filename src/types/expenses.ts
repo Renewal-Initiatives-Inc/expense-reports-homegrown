@@ -1,0 +1,61 @@
+export type ExpenseType = 'out_of_pocket' | 'mileage'
+
+export interface Expense {
+  id: string
+  reportId: string
+  type: ExpenseType
+  amount: string
+  date: string
+  merchant: string | null
+  memo: string | null
+  categoryId: string | null
+  categoryName: string | null
+  projectId: string | null
+  projectName: string | null
+  billable: boolean
+  receiptUrl: string | null
+  receiptThumbnailUrl: string | null
+  originAddress: string | null
+  destinationAddress: string | null
+  miles: string | null
+  aiConfidence: Record<string, number> | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CreateExpenseInput {
+  type: ExpenseType
+  amount: string
+  date: string
+  merchant?: string
+  memo?: string
+  categoryId?: string
+  categoryName?: string
+  projectId?: string
+  projectName?: string
+  billable?: boolean
+  receiptUrl?: string
+  receiptThumbnailUrl?: string
+  // Mileage-specific fields
+  originAddress?: string
+  destinationAddress?: string
+  miles?: string
+}
+
+export interface UpdateExpenseInput {
+  amount?: string
+  date?: string
+  merchant?: string
+  memo?: string
+  categoryId?: string
+  categoryName?: string
+  projectId?: string
+  projectName?: string
+  billable?: boolean
+  receiptUrl?: string
+  receiptThumbnailUrl?: string
+  // Mileage-specific fields
+  originAddress?: string
+  destinationAddress?: string
+  miles?: string
+}

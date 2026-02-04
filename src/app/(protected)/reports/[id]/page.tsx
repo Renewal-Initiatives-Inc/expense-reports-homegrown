@@ -1,5 +1,6 @@
+import { ExpensesSection } from '@/components/expenses/expenses-section'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { auth } from '@/lib/auth'
 import { getReportById } from '@/lib/db/queries/reports'
@@ -107,18 +108,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
         </CardContent>
       </Card>
 
-      <Card data-testid="expenses-card">
-        <CardHeader>
-          <CardTitle>Expenses</CardTitle>
-          <CardDescription>Add your expense receipts and mileage entries to this report.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <p className="text-muted-foreground">No expenses yet.</p>
-            <p className="text-sm text-muted-foreground">Expense management will be added in Phase 3.</p>
-          </div>
-        </CardContent>
-      </Card>
+      <ExpensesSection reportId={report.id} reportStatus={report.status} />
     </div>
   )
 }

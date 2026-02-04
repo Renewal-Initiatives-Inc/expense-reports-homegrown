@@ -173,6 +173,48 @@
 
 ---
 
+## Phase 7b: QuickBooks Online Production Approval
+
+**Goal**: Complete Intuit's app assessment process and configure production environment.
+
+**Prerequisites**: Phase 7 complete with working sandbox integration.
+
+**Reference**: [Intuit Developer Documentation](https://developer.intuit.com/app/developer/qbo/docs/develop)
+
+**Tasks**:
+
+1. Complete Intuit Developer Portal app assessment questionnaire
+2. Create Privacy Policy page (`/privacy`) and host at production URL
+3. Create Terms of Service page (`/terms`) and host at production URL
+4. Prepare app branding assets (logo 150x150px minimum, app description)
+5. Submit production URLs to Intuit (app URL, redirect URI, privacy policy, terms)
+6. Document security practices for Intuit review (token encryption, data handling)
+7. Respond to any Intuit reviewer questions/requests
+8. Obtain production OAuth credentials (Client ID, Client Secret)
+9. Configure production environment variables on Vercel
+10. Update production redirect URI in Intuit portal
+11. Test OAuth flow with production credentials
+12. Verify category and project sync works in production
+13. Set up error monitoring/alerting for QBO API failures
+
+**External Setup Required**:
+
+- Intuit Developer Portal production app approval
+- Privacy Policy content (legal review recommended)
+- Terms of Service content (legal review recommended)
+- Production hosting with HTTPS (Vercel)
+
+**Deliverable**: App approved for production QBO access; OAuth flow works with production credentials.
+
+**Notes**:
+
+- Intuit review can take several days to weeks depending on app complexity
+- Privacy policy must explain what QBO data is accessed and how it's used
+- May need to demonstrate the app to Intuit reviewers
+- Keep sandbox credentials for development/testing after production approval
+
+---
+
 ## Phase 8: Report Submission & Approval Workflow
 
 **Goal**: Implement the full submission and approval workflow.
@@ -295,24 +337,24 @@ Phase 2 (Database + CRUD) ──────────────────
     ├──────────────────┬──────────────────┐                      │
     ▼                  ▼                  ▼                      │
 Phase 3            Phase 6            Phase 7                    │
-(Out-of-pocket)    (Mileage)          (QBO Setup)                │
+(Out-of-pocket)    (Mileage)          (QBO Setup/Sandbox)        │
     │                  │                  │                      │
-    ▼                  │                  │                      │
-Phase 4                │                  │                      │
-(Claude Vision)        │                  │                      │
-    │                  │                  │                      │
-    ▼                  │                  │                      │
-Phase 5                │                  │                      │
-(Camera)               │                  │                      │
-    │                  │                  │                      │
-    └──────────────────┴──────────────────┘                      │
-                       │                                         │
-                       ▼                                         │
-              Phase 8 (Approval Workflow) ◀──────────────────────┘
+    ▼                  │                  ▼                      │
+Phase 4                │              Phase 7b                   │
+(Claude Vision)        │              (QBO Production) ─────┐    │
+    │                  │                                    │    │
+    ▼                  │                                    │    │
+Phase 5                │                                    │    │
+(Camera)               │                                    │    │
+    │                  │                                    │    │
+    └──────────────────┴────────────────────────────────────│────┘
+                       │                                    │
+                       ▼                                    │
+              Phase 8 (Approval Workflow) ◀─────────────────┘
                        │
                        ├────────────────────┐
                        ▼                    ▼
-              Phase 9 (Notifications)   Phase 10 (QBO Sync)
+              Phase 9 (Notifications)   Phase 10 (QBO Bill Sync)
                        │                    │
                        └────────────────────┘
                                 │
@@ -323,6 +365,10 @@ Phase 5                │                  │                      │
                        Phase 12 (Testing)
 ```
 
+**Note**: Phase 7b (QBO Production) can be started once Phase 7 is complete but may take
+time for Intuit approval. Phase 10 (QBO Bill Sync) requires Phase 7b completion for
+production bill creation.
+
 ---
 
 ## Risk Areas & Mitigation
@@ -330,6 +376,7 @@ Phase 5                │                  │                      │
 | Risk                          | Impact | Mitigation                                                           |
 | ----------------------------- | ------ | -------------------------------------------------------------------- |
 | QBO OAuth complexity          | Medium | Follow Intuit's Node.js SDK examples; test with sandbox first        |
+| QBO production approval delay | High   | Start Phase 7b early; prepare legal docs in advance; have all other phases ready |
 | Claude Vision accuracy        | Low    | Always allow manual override; confidence indicators set expectations |
 | Camera access across browsers | Medium | Provide file upload fallback; test early on target browsers          |
 | Google Maps API costs         | Low    | Distance Matrix is cheap; cache results where possible               |
