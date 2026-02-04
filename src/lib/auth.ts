@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import type { NextAuthConfig, Session } from 'next-auth'
 import 'next-auth/jwt'
+import { upsertUser } from './db/queries/users'
 
 // Custom types for Zitadel roles
 interface ZitadelRoles {
@@ -96,6 +97,19 @@ export const authConfig: NextAuthConfig = {
           (profile['urn:zitadel:iam:org:project:roles'] as ZitadelRoles) ||
           (profile['roles'] as ZitadelRoles)
         token.role = extractRole(roles)
+
+        // Track user login in database
+        try {
+          await upsertUser({
+            id: profile.sub as string,
+            email: (profile.email as string) || '',
+            name: (profile.name as string) || (profile.preferred_username as string) || 'Unknown',
+            role: token.role,
+          })
+        } catch (error) {
+          // Log but don't block login if upsert fails
+          console.error('Failed to upsert user on login:', error)
+        }
       }
 
       return token

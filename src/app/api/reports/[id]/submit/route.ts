@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth'
+import { notifyReportSubmitted } from '@/lib/db/queries/notifications'
 import { submitReport } from '@/lib/db/queries/reports'
+import { getAdminUserIds } from '@/lib/db/queries/users'
 import { NextResponse } from 'next/server'
 
 interface RouteParams {
@@ -16,6 +18,22 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const { id } = await params
     const report = await submitReport(id, session.user.id)
+
+    // Notify all admins about the new submission
+    try {
+      const adminIds = await getAdminUserIds()
+      if (adminIds.length > 0) {
+        await notifyReportSubmitted(
+          adminIds,
+          report.id,
+          report.name,
+          session.user.name || session.user.email || 'Unknown User'
+        )
+      }
+    } catch (notifyError) {
+      // Log but don't fail the submission if notification fails
+      console.error('Failed to send admin notifications:', notifyError)
+    }
 
     return NextResponse.json(report)
   } catch (error) {

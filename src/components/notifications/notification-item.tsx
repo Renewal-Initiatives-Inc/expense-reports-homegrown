@@ -45,7 +45,16 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
     }
   }
 
-  const href = notification.reportId ? `/reports/${notification.reportId}` : '#'
+  // Route admins to approval page for submitted reports, others to regular report page
+  const getHref = () => {
+    if (!notification.reportId) return '#'
+    if (notification.type === 'report_submitted') {
+      return `/admin/approvals/${notification.reportId}`
+    }
+    return `/reports/${notification.reportId}`
+  }
+
+  const href = getHref()
 
   return (
     <Link
