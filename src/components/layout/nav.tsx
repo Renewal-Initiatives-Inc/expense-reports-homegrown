@@ -16,7 +16,7 @@ const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', testId: 'nav-dashboard' },
   { href: '/reports', label: 'My Reports', testId: 'nav-reports' },
   { href: '/admin/approvals', label: 'Approvals', testId: 'nav-approvals', adminOnly: true },
-  { href: '/admin/qbo', label: 'Settings', testId: 'nav-admin', adminOnly: true },
+  { href: '/admin/settings', label: 'Settings', testId: 'nav-settings', adminOnly: true },
 ]
 
 function isActive(pathname: string, href: string): boolean {

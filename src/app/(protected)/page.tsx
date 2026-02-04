@@ -4,7 +4,7 @@ import { RoleBadge } from '@/components/ui/role-badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { auth } from '@/lib/auth'
 import { getRecentReports, getReportCountsByStatus, getSubmittedReportsCount } from '@/lib/db/queries/reports'
-import { ClipboardList, FileText, Plus } from 'lucide-react'
+import { ClipboardList, FileText, Plus, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -104,14 +104,22 @@ export default async function DashboardPage() {
               </Link>
             </Button>
             {session.user.role === 'admin' && (
-              <Button variant={pendingApprovalCount > 0 ? 'default' : 'outline'} asChild data-testid="view-approvals-action">
-                <Link href="/admin/approvals">
-                  <ClipboardList className="mr-2 h-4 w-4" />
-                  {pendingApprovalCount > 0
-                    ? `Review ${pendingApprovalCount} Pending Report${pendingApprovalCount !== 1 ? 's' : ''}`
-                    : 'View Approval Queue'}
-                </Link>
-              </Button>
+              <>
+                <Button variant={pendingApprovalCount > 0 ? 'default' : 'outline'} asChild data-testid="view-approvals-action">
+                  <Link href="/admin/approvals">
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    {pendingApprovalCount > 0
+                      ? `Review ${pendingApprovalCount} Pending Report${pendingApprovalCount !== 1 ? 's' : ''}`
+                      : 'View Approval Queue'}
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild data-testid="admin-settings-action">
+                  <Link href="/admin/settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Admin Settings
+                  </Link>
+                </Button>
+              </>
             )}
           </CardContent>
         </Card>

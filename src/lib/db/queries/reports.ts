@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import { db } from '..'
 import { expenses, expenseReports, type ReportStatus } from '../schema'
 import type { CreateReportInput, ExpenseReport, ExpenseReportSummary, ReportCountsByStatus, UpdateReportInput } from '@/types/reports'
@@ -180,6 +180,57 @@ export async function getRecentReports(userId: string, limit: number = 5): Promi
     .groupBy(expenseReports.id)
     .orderBy(desc(expenseReports.createdAt))
     .limit(limit)
+
+  return results.map((row) => ({
+    ...row,
+    status: row.status as ReportStatus,
+  }))
+}
+
+// ============================================================================
+// FILTERED REPORTS (Phase 11)
+// ============================================================================
+
+export interface ReportFilters {
+  status?: ReportStatus
+  fromDate?: string // YYYY-MM-DD
+  toDate?: string // YYYY-MM-DD
+}
+
+export async function getFilteredReportsByUserId(userId: string, filters: ReportFilters): Promise<ExpenseReportSummary[]> {
+  const conditions = [eq(expenseReports.userId, userId)]
+
+  if (filters.status) {
+    conditions.push(eq(expenseReports.status, filters.status))
+  }
+
+  if (filters.fromDate) {
+    conditions.push(gte(expenseReports.createdAt, new Date(filters.fromDate)))
+  }
+
+  if (filters.toDate) {
+    // Add one day to include the entire toDate day
+    const endDate = new Date(filters.toDate)
+    endDate.setDate(endDate.getDate() + 1)
+    conditions.push(lte(expenseReports.createdAt, endDate))
+  }
+
+  const results = await db
+    .select({
+      id: expenseReports.id,
+      userId: expenseReports.userId,
+      name: expenseReports.name,
+      status: expenseReports.status,
+      createdAt: expenseReports.createdAt,
+      updatedAt: expenseReports.updatedAt,
+      expenseCount: sql<number>`COALESCE(count(${expenses.id}), 0)::int`,
+      totalAmount: sql<string | null>`COALESCE(sum(${expenses.amount}), 0)::numeric(10,2)`,
+    })
+    .from(expenseReports)
+    .leftJoin(expenses, eq(expenses.reportId, expenseReports.id))
+    .where(and(...conditions))
+    .groupBy(expenseReports.id)
+    .orderBy(desc(expenseReports.createdAt))
 
   return results.map((row) => ({
     ...row,
