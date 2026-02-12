@@ -34,24 +34,28 @@ declare module 'next-auth' {
   }
 }
 
+// Check if user has access to this application
+// Requires either 'admin' role or 'app:expense-reports-homegrown' role
+function hasAppAccess(roles: ZitadelRoles | undefined): boolean {
+  if (!roles) return false
+  return !!roles['admin'] || !!roles['app:expense-reports-homegrown']
+}
+
 // Extract role from Zitadel token claims
+// Only call after verifying access with hasAppAccess
 function extractRole(roles: ZitadelRoles | undefined): AppRole {
   if (!roles) return 'user'
 
-  // Look for the expense-reports-homegrown app roles
-  const appRoles = roles['app:expense-reports-homegrown']
-  if (appRoles) {
-    // Check if user has admin role
-    if (Object.keys(appRoles).length > 0) {
-      // If user has admin role in any org, they're an admin
-      const hasAdmin = Object.values(appRoles).some((role) => role === 'admin')
-      if (hasAdmin) return 'admin'
-    }
-  }
-
-  // Also check for direct admin role
+  // Direct admin role
   if (roles['admin']) {
     return 'admin'
+  }
+
+  // Check if app-specific role has admin value
+  const appRoles = roles['app:expense-reports-homegrown']
+  if (appRoles) {
+    const hasAdmin = Object.values(appRoles).some((role) => role === 'admin')
+    if (hasAdmin) return 'admin'
   }
 
   return 'user'
@@ -86,13 +90,22 @@ export const authConfig: NextAuthConfig = {
     },
   ],
   callbacks: {
+    async signIn({ profile }) {
+      // Deny access if user lacks required Zitadel roles
+      const roles =
+        (profile?.['urn:zitadel:iam:org:project:roles'] as ZitadelRoles) ||
+        (profile?.['roles'] as ZitadelRoles)
+      if (!hasAppAccess(roles)) {
+        return false
+      }
+      return true
+    },
     async jwt({ token, account, profile }) {
       // Initial sign in
       if (account && profile) {
         token.sub = profile.sub as string
 
         // Extract roles from Zitadel token
-        // Zitadel typically puts roles in 'urn:zitadel:iam:org:project:roles' claim
         const roles =
           (profile['urn:zitadel:iam:org:project:roles'] as ZitadelRoles) ||
           (profile['roles'] as ZitadelRoles)
