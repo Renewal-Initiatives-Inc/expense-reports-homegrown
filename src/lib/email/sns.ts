@@ -25,6 +25,11 @@ export interface SesNotification {
 export async function verifySnsMessage(message: Record<string, unknown>): Promise<boolean> {
   return new Promise((resolve) => {
     validator.validate(message, (err) => {
+      if (err) {
+        console.error('[email/inbound] SNS validation error:', err.message)
+        console.error('[email/inbound] Message keys:', Object.keys(message).join(', '))
+        console.error('[email/inbound] Message Type:', message.Type)
+      }
       resolve(!err)
     })
   })
