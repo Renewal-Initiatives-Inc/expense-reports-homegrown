@@ -1,4 +1,5 @@
 export type ExpenseType = 'out_of_pocket' | 'mileage'
+export type ExpenseSource = 'camera' | 'email'
 
 export interface Expense {
   id: string
@@ -19,6 +20,11 @@ export interface Expense {
   destinationAddress: string | null
   miles: string | null
   aiConfidence: Record<string, number> | null
+  // Email receipt fields (Phase 13)
+  source: ExpenseSource
+  emailReceivedAt: Date | null
+  emailMessageId: string | null
+  duplicateFlag: boolean
   createdAt: Date
   updatedAt: Date
 }

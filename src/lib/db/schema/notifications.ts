@@ -1,7 +1,13 @@
 import { boolean, index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { expenseReports } from './expense-reports'
 
-export const notificationTypeEnum = ['report_submitted', 'report_approved', 'report_rejected'] as const
+export const notificationTypeEnum = [
+  'report_submitted',
+  'report_approved',
+  'report_rejected',
+  'email_receipt_processed',
+  'email_sender_unrecognized',
+] as const
 export type NotificationType = (typeof notificationTypeEnum)[number]
 
 export const notifications = pgTable(

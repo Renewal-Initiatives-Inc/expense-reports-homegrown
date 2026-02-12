@@ -57,6 +57,15 @@ data-testid="nav-admin-settings"
 // Status indicators
 data-testid="report-status-badge"
 data-testid="notification-count"
+
+// Email receipts feature
+data-testid="expense-source-badge"
+data-testid="expense-duplicate-warning"
+data-testid="expense-incomplete-flag"
+data-testid="secondary-email-list"
+data-testid="secondary-email-add-input"
+data-testid="secondary-email-add-button"
+data-testid="secondary-email-remove-button-{id}"
 ```
 
 ---
@@ -144,7 +153,7 @@ date // Expense date
 | Test files            | `*.test.ts(x)`               | `expense-card.test.tsx`                       |
 | E2E test files        | `*.spec.ts`                  | `submit-report.spec.ts`                       |
 | Constants             | SCREAMING_SNAKE_CASE         | `MAX_MILEAGE_MILES`, `IRS_RATE_KEY`           |
-| Environment variables | SCREAMING_SNAKE_CASE         | `QBO_CLIENT_ID`, `ANTHROPIC_API_KEY`          |
+| Environment variables | SCREAMING_SNAKE_CASE         | `QBO_CLIENT_ID`, `ANTHROPIC_API_KEY`, `AWS_SES_FROM_ADDRESS` |
 
 ---
 
@@ -178,6 +187,12 @@ src/
 │   └── utils/             # Utility functions
 ├── hooks/                 # Custom React hooks
 └── types/                 # TypeScript type definitions
+
+# Email Receipts Feature Additions:
+# src/app/api/email/inbound/route.ts    — webhook handler
+# src/lib/email/                         — MIME parsing, sender verification, auto-reply
+# src/lib/db/schema/user-emails.ts       — secondary emails table
+# src/lib/db/schema/email-auto-replies.ts — rate limiting table
 ```
 
 ---

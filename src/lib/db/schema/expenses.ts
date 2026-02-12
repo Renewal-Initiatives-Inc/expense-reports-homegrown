@@ -27,6 +27,11 @@ export const expenses = pgTable(
     destinationAddress: text('destination_address'),
     miles: numeric('miles', { precision: 6, scale: 2 }),
     aiConfidence: jsonb('ai_confidence'),
+    // Email receipt fields (Phase 13)
+    source: text('source').default('camera').notNull(),
+    emailReceivedAt: timestamp('email_received_at', { withTimezone: true }),
+    emailMessageId: text('email_message_id'),
+    duplicateFlag: boolean('duplicate_flag').default(false).notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },

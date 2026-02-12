@@ -119,11 +119,17 @@ Technology choices for this project prioritize:
 
 ### D7: Email Service
 
-- **Decision**: Not needed
-- **Date**: 2026-02-03
-- **Status**: Decided (Scope)
-- **Rationale**: Requirements specify in-app notifications only (R11). Email notifications explicitly out of scope.
-- **Dependencies**: None
+- **Decision**: ~~Not needed~~ → AWS SES (inbound + outbound)
+- **Date**: 2026-02-03 (original), **2026-02-11 (updated for Email Receipts feature)**
+- **Status**: Updated
+- **Options Considered**:
+  - AWS SES Inbound - MX record on subdomain, stores in S3, triggers SNS (~$0.01/mo)
+  - Cloudflare Email Workers - Free, but requires CF DNS (conflicts with Fastmail/Wix)
+  - Resend Inbound - Free tier, webhook-based (user had bad prior experience)
+  - SendGrid/Postmark/Mailgun - $15-35/mo fixed cost (violates budget constraint)
+- **Rationale**: AWS SES is essentially free at 5-10 emails/month, user has existing AWS account, subdomain MX avoids DNS conflicts with Fastmail. Outbound SES also needed for auto-reply to unrecognized senders. One-time setup complexity is acceptable vs. ongoing cost or infrastructure conflicts.
+- **Key Tradeoffs Accepted**: Complex initial setup (SES + S3 + SNS + IAM); SES inbound only available in us-east-1, us-west-2, eu-west-1
+- **Dependencies**: Requires MX record on `expenses.renewalinitiatives.org` subdomain; drives D11 (pipeline architecture)
 
 ---
 
@@ -174,10 +180,75 @@ Technology choices for this project prioritize:
 
 ---
 
+### D11: AWS Pipeline Architecture (Email Receipts)
+
+- **Decision**: SES → S3 → SNS → Vercel webhook (no Lambda)
+- **Date**: 2026-02-11
+- **Status**: Decided
+- **Options Considered**:
+  - SES → S3 → SNS → Vercel webhook - Simplest; fewest services; SNS handles retries
+  - SES → S3 → Lambda → Vercel webhook - Lambda pre-filters before hitting app; more control
+  - SES → S3 → EventBridge → Vercel webhook - Better retry/DLQ support; overkill at this volume
+- **Rationale**: At 5-10 emails/month, Lambda pre-filtering adds complexity without benefit. The Vercel webhook handler can do all validation (sender check, MIME parsing, extraction). SNS provides automatic retry on transient failures. Fewer services = less to maintain.
+- **Key Tradeoffs Accepted**: Less control over retries than Lambda (acceptable at this volume); SNS may deliver duplicate messages (handle with idempotency via email_message_id)
+- **Dependencies**: D7 (AWS SES); webhook route at `/api/email/inbound`
+
+---
+
+### D12: MIME Parsing Library (Email Receipts)
+
+- **Decision**: `postal-mime`
+- **Date**: 2026-02-11
+- **Status**: Decided
+- **Options Considered**:
+  - `postal-mime` - Modern, lightweight (~25KB), designed for serverless/edge environments, Promise-based API
+  - `mailparser` - Established (~180KB), part of Nodemailer ecosystem, handles every MIME edge case
+  - Manual parsing - No dependency, but MIME spec is a minefield of encoding/boundary/charset edge cases
+- **Rationale**: `postal-mime` is purpose-built for serverless environments like Vercel. Lightweight, Promise-native, handles attachments cleanly. At 5-10 emails/month (mostly Stripe-powered or standard PDFs), obscure MIME edge cases are unlikely. `mailparser` is battle-tested but brings unnecessary weight.
+- **Key Tradeoffs Accepted**: Smaller community than `mailparser`; less battle-tested on exotic MIME formats (acceptable given receipt-focused use case)
+- **Dependencies**: None
+
+---
+
+### D13: Webhook Authentication (Email Receipts)
+
+- **Decision**: SNS Message Signature Verification
+- **Date**: 2026-02-11
+- **Status**: Decided
+- **Options Considered**:
+  - SNS signature verification - Cryptographic verification of SNS message signatures using AWS-published certs
+  - Shared secret header - Simple token check (can't inject custom headers into SNS without Lambda)
+  - API Gateway + IAM - AWS API Gateway in front of webhook (adds another service)
+- **Rationale**: AWS-recommended approach for SNS → HTTPS endpoints. No shared secrets to manage or rotate. Each SNS message includes a signature and signing cert URL — handler verifies cryptographically. Available as npm package (`sns-validator`). Shared secret doesn't work cleanly without Lambda; API Gateway defeats the simplicity of the direct pipeline.
+- **Key Tradeoffs Accepted**: Requires fetching/caching signing cert on each request (minimal overhead); must validate cert URL is `*.amazonaws.com` to prevent spoofing
+- **Dependencies**: D11 (SNS pipeline)
+
+---
+
+### D14: HTML Receipt Storage Strategy (Email Receipts)
+
+- **Decision**: Store raw HTML in Vercel Blob; extract data via Claude Vision text input (no rendering)
+- **Date**: 2026-02-11
+- **Status**: Decided
+- **Options Considered**:
+  - Store HTML + extract as text via Claude Vision - Pass HTML to Claude as text input; store raw HTML in Blob as audit artifact
+  - Convert HTML to PDF server-side (Puppeteer) - Consistent PDF format; heavy dependency (~300MB)
+  - Screenshot HTML to image (Puppeteer) - Consistent with camera receipts; same heavy dependency
+  - Store raw HTML + render in iframe - Full fidelity display; XSS/security concerns
+- **Rationale**: Most Stripe receipts include PDF attachments (validated via Fastmail test) — HTML-only is the fallback, not the common case. Claude reads structured HTML text more accurately than OCR on a rendered screenshot. Avoids pulling Puppeteer into Vercel serverless (size limits, cold start). Reuses the existing Claude Vision extraction pipeline — HTML is just another input format. Raw HTML stored in Blob as downloadable audit artifact if ever needed.
+- **Key Tradeoffs Accepted**: Users can't "view" HTML receipts as rendered images in the UI — they see extracted fields + can download the raw HTML. Acceptable since this case is rare and audit rendering isn't needed for ~5 years.
+- **Dependencies**: D6 (Vercel Blob for storage); reuses existing Claude Vision pipeline
+
+---
+
 ## External API Integrations
 
-| Integration                 | Purpose                     | Auth Method | Status       |
-| --------------------------- | --------------------------- | ----------- | ------------ |
-| QuickBooks Online           | Bills, categories, projects | OAuth 2.0   | To configure |
-| Claude Vision               | Receipt OCR                 | API key     | To configure |
-| Google Maps Distance Matrix | Mileage calculation         | API key     | To configure |
+| Integration                 | Purpose                              | Auth Method              | Status       |
+| --------------------------- | ------------------------------------ | ------------------------ | ------------ |
+| QuickBooks Online           | Bills, categories, projects          | OAuth 2.0                | To configure |
+| Claude Vision               | Receipt OCR                          | API key                  | To configure |
+| Google Maps Distance Matrix | Mileage calculation                  | API key                  | To configure |
+| AWS SES (Inbound)           | Receive forwarded receipt emails     | MX record + SNS sig verify | To configure |
+| AWS SES (Outbound)          | Auto-reply to unrecognized senders   | IAM credentials          | To configure |
+| AWS S3                      | Raw email MIME storage               | IAM credentials          | To configure |
+| AWS SNS                     | Email processing event notifications | SNS signature            | To configure |

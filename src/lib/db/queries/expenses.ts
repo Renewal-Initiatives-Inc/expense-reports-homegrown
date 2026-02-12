@@ -232,6 +232,10 @@ function mapExpenseRow(row: typeof expenses.$inferSelect): Expense {
     destinationAddress: row.destinationAddress,
     miles: row.miles,
     aiConfidence: row.aiConfidence as Record<string, number> | null,
+    source: (row.source as 'camera' | 'email') ?? 'camera',
+    emailReceivedAt: row.emailReceivedAt,
+    emailMessageId: row.emailMessageId,
+    duplicateFlag: row.duplicateFlag ?? false,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }

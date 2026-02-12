@@ -3,7 +3,7 @@
 import type { Notification, NotificationsResponse } from '@/types/notifications'
 import { useCallback, useEffect, useState } from 'react'
 
-const POLL_INTERVAL = 30000 // 30 seconds
+const POLL_INTERVAL = 86400000 // 24 hours (86400 seconds * 1000ms)
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])

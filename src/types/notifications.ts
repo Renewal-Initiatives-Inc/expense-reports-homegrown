@@ -1,4 +1,9 @@
-export type NotificationType = 'report_submitted' | 'report_approved' | 'report_rejected'
+export type NotificationType =
+  | 'report_submitted'
+  | 'report_approved'
+  | 'report_rejected'
+  | 'email_receipt_processed'
+  | 'email_sender_unrecognized'
 
 export interface Notification {
   id: string
