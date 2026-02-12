@@ -17,7 +17,7 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
   return (
     <div className="bg-background">
       <Header user={session.user} />
-      <main className="container py-6">{children}</main>
+      <main className="container px-4 py-6 md:px-6">{children}</main>
     </div>
   )
 }

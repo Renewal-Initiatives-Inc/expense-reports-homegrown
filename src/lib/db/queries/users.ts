@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from '..'
-import { users, type User, type UserRole } from '../schema'
+import { userEmails, users, type User, type UserRole } from '../schema'
 
 /**
  * Upsert a user - create or update on login
@@ -51,4 +51,33 @@ export async function getUserById(id: string): Promise<User | undefined> {
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1)
 
   return result[0]
+}
+
+/**
+ * Look up a user by any of their email addresses (primary or secondary).
+ * Checks users.email first, then userEmails.email (stored lowercase per ECP4).
+ */
+export async function getUserByAnyEmail(email: string): Promise<User | undefined> {
+  const normalized = email.toLowerCase()
+
+  // Check primary email
+  const primary = await db
+    .select()
+    .from(users)
+    .where(eq(sql`LOWER(${users.email})`, normalized))
+    .limit(1)
+
+  if (primary.length > 0) {
+    return primary[0]
+  }
+
+  // Check secondary emails
+  const secondary = await db
+    .select({ user: users })
+    .from(userEmails)
+    .innerJoin(users, eq(userEmails.userId, users.id))
+    .where(eq(userEmails.email, normalized))
+    .limit(1)
+
+  return secondary[0]?.user
 }

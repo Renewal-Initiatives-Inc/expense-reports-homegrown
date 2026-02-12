@@ -489,3 +489,37 @@ export async function reopenReport(reportId: string, userId: string): Promise<Ex
     status: row.status as ReportStatus,
   }
 }
+
+// ============================================================================
+// EMAIL RECEIPT REPORT (Phase 14)
+// ============================================================================
+
+const EMAILED_RECEIPTS_REPORT_NAME = 'Emailed Receipts'
+
+/**
+ * Find or create the "Emailed Receipts" report for a user.
+ * Reuses an existing open report, or creates a new one if none exists.
+ */
+export async function findOrCreateEmailedReceiptsReport(userId: string): Promise<ExpenseReport> {
+  // Look for an existing open "Emailed Receipts" report
+  const existing = await db
+    .select()
+    .from(expenseReports)
+    .where(
+      and(
+        eq(expenseReports.userId, userId),
+        eq(expenseReports.name, EMAILED_RECEIPTS_REPORT_NAME),
+        eq(expenseReports.status, 'open')
+      )
+    )
+    .orderBy(desc(expenseReports.createdAt))
+    .limit(1)
+
+  if (existing.length > 0) {
+    const row = existing[0]
+    return { ...row, status: row.status as ReportStatus }
+  }
+
+  // Create a new one
+  return createReport(userId, { name: EMAILED_RECEIPTS_REPORT_NAME })
+}

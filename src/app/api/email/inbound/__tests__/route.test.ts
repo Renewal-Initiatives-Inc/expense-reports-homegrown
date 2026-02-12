@@ -6,9 +6,10 @@ vi.mock('@/lib/email', () => ({
   confirmSnsSubscription: vi.fn(),
   parseSnsNotification: vi.fn(),
   fetchEmailFromS3: vi.fn(),
+  processInboundEmail: vi.fn(),
 }))
 
-import { confirmSnsSubscription, fetchEmailFromS3, parseSnsNotification, verifySnsMessage } from '@/lib/email'
+import { confirmSnsSubscription, fetchEmailFromS3, parseSnsNotification, processInboundEmail, verifySnsMessage } from '@/lib/email'
 import { POST } from '../route'
 
 function createRequest(body: unknown): Request {
@@ -110,10 +111,15 @@ describe('POST /api/email/inbound', () => {
       messageId: 'msg-001',
     }
 
-    it('processes valid email notification and returns 200', async () => {
+    it('processes email through pipeline and returns result status', async () => {
       vi.mocked(verifySnsMessage).mockResolvedValue(true)
       vi.mocked(parseSnsNotification).mockReturnValue(validSesNotification)
       vi.mocked(fetchEmailFromS3).mockResolvedValue('From: sender@example.com\nSubject: Receipt\n\nBody')
+      vi.mocked(processInboundEmail).mockResolvedValue({
+        status: 'expense_created',
+        expenseId: 'exp-001',
+        reportId: 'rpt-001',
+      })
 
       const request = createRequest({
         Type: 'Notification',
@@ -127,9 +133,61 @@ describe('POST /api/email/inbound', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      expect(data.status).toBe('received')
+      expect(data.status).toBe('expense_created')
       expect(data.messageId).toBe('msg-001')
       expect(fetchEmailFromS3).toHaveBeenCalledWith('renewal-expense-emails', 'incoming/abc123')
+      expect(processInboundEmail).toHaveBeenCalledWith(
+        'From: sender@example.com\nSubject: Receipt\n\nBody',
+        'msg-001'
+      )
+    })
+
+    it('handles sender_unrecognized pipeline result', async () => {
+      vi.mocked(verifySnsMessage).mockResolvedValue(true)
+      vi.mocked(parseSnsNotification).mockReturnValue(validSesNotification)
+      vi.mocked(fetchEmailFromS3).mockResolvedValue('From: unknown@example.com\nSubject: Test\n\nBody')
+      vi.mocked(processInboundEmail).mockResolvedValue({
+        status: 'sender_unrecognized',
+        sender: 'unknown@example.com',
+      })
+
+      const request = createRequest({
+        Type: 'Notification',
+        Message: JSON.stringify({
+          receipt: { action: { bucketName: 'renewal-expense-emails', objectKey: 'incoming/abc123' } },
+          mail: { messageId: 'msg-001' },
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.status).toBe('sender_unrecognized')
+    })
+
+    it('handles skipped_duplicate_message pipeline result', async () => {
+      vi.mocked(verifySnsMessage).mockResolvedValue(true)
+      vi.mocked(parseSnsNotification).mockReturnValue(validSesNotification)
+      vi.mocked(fetchEmailFromS3).mockResolvedValue('From: sender@example.com\nSubject: Test\n\nBody')
+      vi.mocked(processInboundEmail).mockResolvedValue({
+        status: 'skipped_duplicate_message',
+        messageId: 'msg-001',
+      })
+
+      const request = createRequest({
+        Type: 'Notification',
+        Message: JSON.stringify({
+          receipt: { action: { bucketName: 'renewal-expense-emails', objectKey: 'incoming/abc123' } },
+          mail: { messageId: 'msg-001' },
+        }),
+      })
+
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.status).toBe('skipped_duplicate_message')
     })
 
     it('returns 400 when SES notification cannot be parsed', async () => {
@@ -150,6 +208,25 @@ describe('POST /api/email/inbound', () => {
       vi.mocked(verifySnsMessage).mockResolvedValue(true)
       vi.mocked(parseSnsNotification).mockReturnValue(validSesNotification)
       vi.mocked(fetchEmailFromS3).mockRejectedValue(new Error('NoSuchKey'))
+
+      const request = createRequest({
+        Type: 'Notification',
+        Message: JSON.stringify({
+          receipt: { action: { bucketName: 'bucket', objectKey: 'key' } },
+          mail: { messageId: 'msg-001' },
+        }),
+      })
+
+      const response = await POST(request)
+
+      expect(response.status).toBe(500)
+    })
+
+    it('returns 500 when pipeline throws', async () => {
+      vi.mocked(verifySnsMessage).mockResolvedValue(true)
+      vi.mocked(parseSnsNotification).mockReturnValue(validSesNotification)
+      vi.mocked(fetchEmailFromS3).mockResolvedValue('From: sender@example.com\nSubject: Test\n\nBody')
+      vi.mocked(processInboundEmail).mockRejectedValue(new Error('DB connection failed'))
 
       const request = createRequest({
         Type: 'Notification',

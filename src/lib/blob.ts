@@ -5,6 +5,7 @@
 import { del, put } from '@vercel/blob'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic']
+const EMAIL_ALLOWED_TYPES = [...ALLOWED_TYPES, 'application/pdf']
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 export interface UploadResult {
@@ -48,6 +49,38 @@ export async function uploadReceipt(file: File): Promise<UploadResult> {
   })
 
   // For Phase 3, thumbnail is same as original (proper thumbnails in Phase 4)
+  return {
+    url: blob.url,
+    thumbnailUrl: blob.url,
+  }
+}
+
+/**
+ * Upload an email attachment (image or PDF) to Vercel Blob storage.
+ * Accepts ArrayBuffer from postal-mime attachment parsing.
+ */
+export async function uploadEmailAttachment(
+  content: ArrayBuffer,
+  filename: string,
+  mimeType: string
+): Promise<UploadResult> {
+  if (!EMAIL_ALLOWED_TYPES.includes(mimeType)) {
+    throw new BlobUploadError(`Invalid file type: ${mimeType}`)
+  }
+
+  if (content.byteLength > MAX_FILE_SIZE) {
+    throw new BlobUploadError(`File too large: ${(content.byteLength / 1024 / 1024).toFixed(2)}MB. Maximum size: 10MB`)
+  }
+
+  const timestamp = Date.now()
+  const extension = filename.split('.').pop() || 'bin'
+  const blobPath = `receipts/email/${timestamp}-${crypto.randomUUID()}.${extension}`
+
+  const blob = await put(blobPath, Buffer.from(content), {
+    access: 'public',
+    contentType: mimeType,
+  })
+
   return {
     url: blob.url,
     thumbnailUrl: blob.url,

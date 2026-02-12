@@ -209,6 +209,111 @@ export async function getReportTotal(reportId: string): Promise<string> {
   return result[0]?.total || '0'
 }
 
+// ============================================================================
+// EMAIL EXPENSE FUNCTIONS (Phase 14)
+// ============================================================================
+
+export interface CreateEmailExpenseInput {
+  type: ExpenseType
+  amount: string
+  date: string
+  merchant?: string | null
+  memo?: string | null
+  categoryId?: string | null
+  categoryName?: string | null
+  receiptUrl?: string | null
+  receiptThumbnailUrl?: string | null
+  aiConfidence?: Record<string, number> | null
+  emailReceivedAt: Date
+  emailMessageId: string
+  duplicateFlag?: boolean
+}
+
+/**
+ * Check if an expense already exists for a given SES message ID (idempotency).
+ */
+export async function getExpenseByEmailMessageId(emailMessageId: string): Promise<Expense | null> {
+  const results = await db
+    .select()
+    .from(expenses)
+    .where(eq(expenses.emailMessageId, emailMessageId))
+    .limit(1)
+
+  if (results.length === 0) {
+    return null
+  }
+
+  return mapExpenseRow(results[0])
+}
+
+/**
+ * Create an expense from an inbound email.
+ * Does NOT check report status (Emailed Receipts report is always open).
+ */
+export async function createEmailExpense(
+  reportId: string,
+  userId: string,
+  input: CreateEmailExpenseInput
+): Promise<Expense> {
+  const results = await db
+    .insert(expenses)
+    .values({
+      reportId,
+      type: input.type,
+      amount: input.amount,
+      date: input.date,
+      merchant: input.merchant || null,
+      memo: input.memo || null,
+      categoryId: input.categoryId || null,
+      categoryName: input.categoryName || null,
+      receiptUrl: input.receiptUrl || null,
+      receiptThumbnailUrl: input.receiptThumbnailUrl || null,
+      aiConfidence: input.aiConfidence || null,
+      source: 'email',
+      emailReceivedAt: input.emailReceivedAt,
+      emailMessageId: input.emailMessageId,
+      duplicateFlag: input.duplicateFlag || false,
+    })
+    .returning()
+
+  // Update report timestamp
+  await db.update(expenseReports).set({ updatedAt: new Date() }).where(eq(expenseReports.id, reportId))
+
+  return mapExpenseRow(results[0])
+}
+
+/**
+ * Check if a potential duplicate expense exists for the user.
+ * Returns true if an expense with the same amount, merchant, and date already exists.
+ */
+export async function checkDuplicateExpense(
+  userId: string,
+  amount: string,
+  merchant: string | null,
+  date: string
+): Promise<boolean> {
+  // Can't detect duplicates without meaningful amount or merchant
+  if (amount === '0.00' || !merchant) {
+    return false
+  }
+
+  const results = await db
+    .select({ id: expenses.id })
+    .from(expenses)
+    .innerJoin(expenseReports, eq(expenses.reportId, expenseReports.id))
+    .where(
+      and(
+        eq(expenseReports.userId, userId),
+        eq(expenses.amount, amount),
+        eq(expenses.date, date),
+        eq(sql`LOWER(${expenses.merchant})`, merchant.toLowerCase())
+      )
+    )
+    .limit(1)
+
+  return results.length > 0
+}
+
 /**
  * Map database row to Expense type.
  */

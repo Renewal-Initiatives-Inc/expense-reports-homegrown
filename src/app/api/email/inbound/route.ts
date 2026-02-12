@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { confirmSnsSubscription, fetchEmailFromS3, parseSnsNotification, verifySnsMessage } from '@/lib/email'
+import { confirmSnsSubscription, fetchEmailFromS3, parseSnsNotification, processInboundEmail, verifySnsMessage } from '@/lib/email'
 import type { SnsMessageType } from '@/lib/email'
 
 /**
@@ -70,15 +70,11 @@ export async function POST(request: Request) {
       // Fetch raw email from S3
       const rawEmail = await fetchEmailFromS3(sesNotification.bucket, sesNotification.key)
 
-      // Log email metadata for verification (Phase 13 scaffold)
-      // Phase 14 will expand this to parse MIME, verify sender, extract receipt, and create expense
-      console.log('[email/inbound] Email received:', {
-        messageId: sesNotification.messageId,
-        s3Location: `s3://${sesNotification.bucket}/${sesNotification.key}`,
-        sizeBytes: rawEmail.length,
-      })
+      // Process the email pipeline: parse, verify sender, extract, create expense
+      const result = await processInboundEmail(rawEmail, sesNotification.messageId)
+      console.log('[email/inbound] Processing result:', result)
 
-      return NextResponse.json({ status: 'received', messageId: sesNotification.messageId })
+      return NextResponse.json({ status: result.status, messageId: sesNotification.messageId })
     } catch (error) {
       console.error('[email/inbound] Failed to process email:', error)
       return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
