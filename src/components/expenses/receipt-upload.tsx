@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { getAcceptString, getMaxFileSize } from '@/lib/blob'
 import { isCameraSupported } from '@/lib/camera-utils'
-import { Camera, ImageIcon, Loader2, Trash2, Upload } from 'lucide-react'
+import { Camera, FileText, ImageIcon, Loader2, Trash2, Upload } from 'lucide-react'
 import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScanningStation } from './scanning-station'
@@ -143,10 +143,27 @@ export function ReceiptUpload({ value, onChange, onExtractionResult, disabled }:
   )
 
   if (value) {
+    const isDocument = (() => {
+      try {
+        const p = new URL(value).pathname.toLowerCase()
+        return p.endsWith('.pdf') || p.endsWith('.html')
+      } catch {
+        const l = value.toLowerCase()
+        return l.endsWith('.pdf') || l.endsWith('.html')
+      }
+    })()
+
     return (
       <div className="space-y-2">
         <div className="relative aspect-[4/3] w-full max-w-xs overflow-hidden rounded-lg border bg-muted">
-          <Image src={value} alt="Receipt" fill className="object-contain" sizes="(max-width: 320px) 100vw, 320px" />
+          {isDocument ? (
+            <a href={value} target="_blank" rel="noopener noreferrer" className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <FileText className="h-12 w-12 text-red-600" />
+              <span className="text-sm">View Receipt</span>
+            </a>
+          ) : (
+            <Image src={value} alt="Receipt" fill className="object-contain" sizes="(max-width: 320px) 100vw, 320px" />
+          )}
         </div>
         <div className="flex gap-2">
           {cameraAvailable && (

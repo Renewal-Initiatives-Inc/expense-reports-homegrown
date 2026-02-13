@@ -1,12 +1,12 @@
 import { isAnthropicConfigured } from '@/lib/anthropic'
-import { uploadEmailAttachment } from '@/lib/blob'
+import { uploadEmailAttachment, uploadEmailHtml } from '@/lib/blob'
 import { EXPENSE_CATEGORIES } from '@/lib/categories'
 import { checkDuplicateExpense, createEmailExpense, getExpenseByEmailMessageId } from '@/lib/db/queries/expenses'
 import { createNotification } from '@/lib/db/queries/notifications'
 import { getCachedData } from '@/lib/db/queries/qbo-cache'
 import { findOrCreateEmailedReceiptsReport } from '@/lib/db/queries/reports'
 import { getUserByAnyEmail } from '@/lib/db/queries/users'
-import { processReceiptImage } from '@/lib/receipt-extraction'
+import { processReceiptImage, processReceiptText } from '@/lib/receipt-extraction'
 import type { QboCategory } from '@/lib/qbo/types'
 import { getReceiptAttachments, parseMimeEmail } from './parse'
 
@@ -46,13 +46,16 @@ export async function processInboundEmail(
     return { status: 'sender_unrecognized', sender: parsed.from }
   }
 
-  // 4. Upload first receipt attachment
+  // 4. Upload receipt (attachment, or HTML body as fallback)
   const receiptAttachments = getReceiptAttachments(parsed.attachments)
   let receiptUrl: string | null = null
   let receiptThumbnailUrl: string | null = null
   let receiptMimeType: string | null = null
+  let emailBodyContent: string | null = null
+  let emailBodyFormat: 'html' | 'text' | null = null
 
   if (receiptAttachments.length > 0) {
+    // Case 1: File attachment (image or PDF)
     const firstAttachment = receiptAttachments[0]
     try {
       const uploadResult = await uploadEmailAttachment(
@@ -66,9 +69,24 @@ export async function processInboundEmail(
     } catch (error) {
       console.error('[email/process] Failed to upload attachment:', error)
     }
+  } else if (parsed.html) {
+    // Case 2: HTML email body (forwarded receipt with no attachment)
+    emailBodyContent = parsed.html
+    emailBodyFormat = 'html'
+    try {
+      const uploadResult = await uploadEmailHtml(parsed.html)
+      receiptUrl = uploadResult.url
+      receiptThumbnailUrl = uploadResult.thumbnailUrl
+    } catch (error) {
+      console.error('[email/process] Failed to upload HTML receipt:', error)
+    }
+  } else if (parsed.text) {
+    // Case 3: Plain text email body
+    emailBodyContent = parsed.text
+    emailBodyFormat = 'text'
   }
 
-  // 5. Extract receipt data (images and PDFs)
+  // 5. Extract receipt data (attachments, HTML, or text)
   let extractedData: {
     merchant: string | null
     amount: string | null
@@ -89,20 +107,37 @@ export async function processInboundEmail(
 
   let didExtract = false
 
-  if (receiptUrl && receiptMimeType && isAnthropicConfigured()) {
+  if (isAnthropicConfigured()) {
     try {
       const categories = await getAvailableCategories()
-      const result = await processReceiptImage(receiptUrl, categories, receiptMimeType)
-      extractedData = {
-        merchant: result.merchant,
-        amount: result.amount,
-        date: result.date,
-        categoryId: result.suggestedCategoryId,
-        categoryName: result.suggestedCategoryName,
-        memo: result.memo,
-        confidence: result.confidence,
+
+      if (receiptUrl && receiptMimeType) {
+        // Extract from image/PDF attachment
+        const result = await processReceiptImage(receiptUrl, categories, receiptMimeType)
+        extractedData = {
+          merchant: result.merchant,
+          amount: result.amount,
+          date: result.date,
+          categoryId: result.suggestedCategoryId,
+          categoryName: result.suggestedCategoryName,
+          memo: result.memo,
+          confidence: result.confidence,
+        }
+        didExtract = true
+      } else if (emailBodyContent && emailBodyFormat) {
+        // Extract from HTML or plain text email body
+        const result = await processReceiptText(emailBodyContent, categories, emailBodyFormat)
+        extractedData = {
+          merchant: result.merchant,
+          amount: result.amount,
+          date: result.date,
+          categoryId: result.suggestedCategoryId,
+          categoryName: result.suggestedCategoryName,
+          memo: result.memo,
+          confidence: result.confidence,
+        }
+        didExtract = true
       }
-      didExtract = true
     } catch (error) {
       console.error('[email/process] Failed to extract receipt data:', error)
     }

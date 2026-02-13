@@ -8,11 +8,13 @@ import type { Expense } from '@/types/expenses'
 import { Car, DollarSign, FileText, MapPin, MoreVertical, Pencil, Receipt, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 
-function isPdfUrl(url: string): boolean {
+function isDocumentUrl(url: string): boolean {
   try {
-    return new URL(url).pathname.toLowerCase().endsWith('.pdf')
+    const pathname = new URL(url).pathname.toLowerCase()
+    return pathname.endsWith('.pdf') || pathname.endsWith('.html')
   } catch {
-    return url.toLowerCase().endsWith('.pdf')
+    const lower = url.toLowerCase()
+    return lower.endsWith('.pdf') || lower.endsWith('.html')
   }
 }
 
@@ -64,7 +66,7 @@ export function ExpenseCard({ expense, canModify, onEdit, onDelete, onViewReceip
                 <Car className="h-8 w-8 text-blue-600" />
               </div>
             ) : expense.receiptThumbnailUrl || expense.receiptUrl ? (
-              isPdfUrl(expense.receiptThumbnailUrl || expense.receiptUrl!) ? (
+              isDocumentUrl(expense.receiptThumbnailUrl || expense.receiptUrl!) ? (
                 <div className="flex h-full w-full items-center justify-center bg-red-50">
                   <FileText className="h-8 w-8 text-red-600" />
                 </div>

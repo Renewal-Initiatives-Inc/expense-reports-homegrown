@@ -88,6 +88,24 @@ export async function uploadEmailAttachment(
 }
 
 /**
+ * Upload an HTML email body as a viewable receipt.
+ */
+export async function uploadEmailHtml(html: string): Promise<UploadResult> {
+  const timestamp = Date.now()
+  const blobPath = `receipts/email/${timestamp}-${crypto.randomUUID()}.html`
+
+  const blob = await put(blobPath, html, {
+    access: 'public',
+    contentType: 'text/html',
+  })
+
+  return {
+    url: blob.url,
+    thumbnailUrl: blob.url,
+  }
+}
+
+/**
  * Delete a receipt image from Vercel Blob storage.
  */
 export async function deleteReceipt(url: string): Promise<void> {

@@ -20,18 +20,28 @@ import {
  * Maps QBO-style category names to related terms that Claude might return.
  */
 const CATEGORY_SYNONYMS: Record<string, string[]> = {
-  meals: ['food', 'restaurant', 'dining', 'lunch', 'dinner', 'breakfast', 'cafe', 'coffee', 'fast food', 'takeout'],
-  'meals and entertainment': ['food', 'restaurant', 'dining', 'lunch', 'dinner', 'breakfast', 'entertainment'],
+  'property taxes': ['tax', 'pilot', 'assessment'],
+  'property insurance': ['insurance', 'liability', 'coverage', 'premium'],
+  'management fees': ['management', 'property management'],
+  commissions: ['broker', 'placement', 'commission', 'leasing'],
+  'landscaping & grounds': ['landscaping', 'snow', 'mowing', 'grounds', 'lawn', 'plowing'],
+  'repairs & maintenance': ['repair', 'maintenance', 'plumbing', 'hvac', 'electrical', 'fix', 'turnover'],
+  'utilities - electric': ['electric', 'electricity', 'power'],
+  'utilities - gas': ['gas', 'natural gas', 'heating'],
+  'utilities - water/sewer': ['water', 'sewer', 'municipal'],
+  'utilities - internet': ['internet', 'wifi', 'broadband', 'cable'],
+  'utilities - security & fire monitoring': ['security', 'fire', 'alarm', 'monitoring'],
+  'utilities - trash': ['trash', 'waste', 'garbage', 'disposal', 'recycling'],
+  'salaries & wages': ['salary', 'wage', 'payroll', 'labor'],
   travel: ['transportation', 'flight', 'airline', 'airfare', 'hotel', 'lodging', 'taxi', 'uber', 'lyft', 'train'],
-  'travel expense': ['transportation', 'flight', 'airline', 'airfare', 'hotel', 'lodging'],
-  'auto and truck expenses': ['gas', 'fuel', 'gasoline', 'car', 'vehicle', 'automotive', 'parking', 'toll'],
+  'meals and entertainment': ['food', 'restaurant', 'dining', 'lunch', 'dinner', 'breakfast', 'cafe', 'coffee', 'entertainment', 'takeout'],
+  'auto and truck expenses': ['gas', 'fuel', 'gasoline', 'car', 'vehicle', 'automotive', 'parking', 'toll', 'mileage'],
   'office supplies': ['supplies', 'stationery', 'office', 'paper', 'pens', 'desk', 'printer'],
-  equipment: ['hardware', 'computer', 'electronics', 'machinery', 'tools'],
-  'professional services': ['consulting', 'legal', 'accounting', 'contractor'],
-  utilities: ['electric', 'water', 'internet', 'phone', 'utility'],
-  'software and subscriptions': ['subscription', 'saas', 'software', 'app', 'technology'],
-  lodging: ['hotel', 'motel', 'airbnb', 'accommodation', 'stay'],
-  'other miscellaneous expense': ['other', 'miscellaneous', 'misc', 'general'],
+  equipment: ['hardware', 'computer', 'electronics', 'machinery', 'tools', 'appliance'],
+  'professional services': ['consulting', 'legal', 'accounting', 'contractor', 'architecture', 'permitting'],
+  'software and subscriptions': ['subscription', 'saas', 'software', 'app', 'technology', 'api'],
+  'construction in progress': ['construction', 'renovation', 'development', 'acquisition', 'building'],
+  'other operating costs': ['other', 'miscellaneous', 'misc', 'general'],
 }
 
 interface Category {
@@ -274,5 +284,51 @@ export async function processReceiptImage(
     )
   } finally {
     clearTimeout(timeout)
+  }
+}
+
+/**
+ * Extract receipt data from HTML or plain text email body.
+ * Sends the content directly to Claude as text (no image conversion needed).
+ */
+export async function processReceiptText(
+  content: string,
+  availableCategories: Category[],
+  format: 'html' | 'text' = 'html'
+): Promise<ReceiptExtractionResult> {
+  const client = createAnthropicClient()
+
+  const prompt = format === 'html'
+    ? `The following is the HTML body of a forwarded receipt email. Extract receipt information from it.\n\n${RECEIPT_EXTRACTION_PROMPT}\n\nHTML content:\n${content}`
+    : `The following is the text body of a forwarded receipt email. Extract receipt information from it.\n\n${RECEIPT_EXTRACTION_PROMPT}\n\nEmail text:\n${content}`
+
+  try {
+    const apiResponse = await client.messages.create({
+      model: RECEIPT_MODEL,
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    })
+
+    const textContent = apiResponse.content.find((block) => block.type === 'text')
+    if (!textContent || textContent.type !== 'text') {
+      throw new AnthropicError('No text response from Claude', 'UNREADABLE')
+    }
+
+    const parsed = parseExtractionResponse(textContent.text)
+    return normalizeExtractionResult(parsed, availableCategories)
+  } catch (error) {
+    if (error instanceof AnthropicError) {
+      throw error
+    }
+
+    throw new AnthropicError(
+      error instanceof Error ? error.message : 'Unknown error processing receipt text',
+      'API_ERROR'
+    )
   }
 }
