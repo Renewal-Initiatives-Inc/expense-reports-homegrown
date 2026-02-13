@@ -64,8 +64,12 @@ export async function deleteQboTokens(): Promise<void> {
 }
 
 export async function isQboConnected(): Promise<boolean> {
-  const tokens = await getQboTokens()
-  return tokens !== null
+  try {
+    const tokens = await getQboTokens()
+    return tokens !== null
+  } catch {
+    return false
+  }
 }
 
 export async function isTokenExpiringSoon(): Promise<boolean> {
