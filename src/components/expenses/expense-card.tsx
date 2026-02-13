@@ -5,8 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import type { Expense } from '@/types/expenses'
-import { Car, DollarSign, MapPin, MoreVertical, Pencil, Receipt, Trash2 } from 'lucide-react'
+import { Car, DollarSign, FileText, MapPin, MoreVertical, Pencil, Receipt, Trash2 } from 'lucide-react'
 import Image from 'next/image'
+
+function isPdfUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith('.pdf')
+  } catch {
+    return url.toLowerCase().endsWith('.pdf')
+  }
+}
 
 interface ExpenseCardProps {
   expense: Expense
@@ -56,13 +64,19 @@ export function ExpenseCard({ expense, canModify, onEdit, onDelete, onViewReceip
                 <Car className="h-8 w-8 text-blue-600" />
               </div>
             ) : expense.receiptThumbnailUrl || expense.receiptUrl ? (
-              <Image
-                src={expense.receiptThumbnailUrl || expense.receiptUrl!}
-                alt="Receipt"
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
+              isPdfUrl(expense.receiptThumbnailUrl || expense.receiptUrl!) ? (
+                <div className="flex h-full w-full items-center justify-center bg-red-50">
+                  <FileText className="h-8 w-8 text-red-600" />
+                </div>
+              ) : (
+                <Image
+                  src={expense.receiptThumbnailUrl || expense.receiptUrl!}
+                  alt="Receipt"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+              )
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <Receipt className="h-8 w-8 text-muted-foreground" />

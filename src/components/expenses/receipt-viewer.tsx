@@ -10,13 +10,24 @@ interface ReceiptViewerProps {
   onClose: () => void
 }
 
+function isPdfUrl(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname
+    return pathname.toLowerCase().endsWith('.pdf')
+  } catch {
+    return url.toLowerCase().endsWith('.pdf')
+  }
+}
+
 export function ReceiptViewer({ url, open, onClose }: ReceiptViewerProps) {
   if (!url) return null
+
+  const isPdf = isPdfUrl(url)
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-auto p-0" data-testid="receipt-viewer">
-        <DialogTitle className="sr-only">Receipt Image</DialogTitle>
+        <DialogTitle className="sr-only">Receipt {isPdf ? 'Document' : 'Image'}</DialogTitle>
         <button
           onClick={onClose}
           className="absolute right-4 top-4 z-10 rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
@@ -25,9 +36,13 @@ export function ReceiptViewer({ url, open, onClose }: ReceiptViewerProps) {
           <X className="h-5 w-5" />
           <span className="sr-only">Close</span>
         </button>
-        <div className="relative aspect-auto min-h-[300px] w-full">
-          <Image src={url} alt="Receipt" fill className="object-contain" sizes="(max-width: 768px) 100vw, 768px" priority />
-        </div>
+        {isPdf ? (
+          <iframe src={url} className="h-[80vh] w-full" title="Receipt PDF" />
+        ) : (
+          <div className="relative aspect-auto min-h-[300px] w-full">
+            <Image src={url} alt="Receipt" fill className="object-contain" sizes="(max-width: 768px) 100vw, 768px" priority />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )

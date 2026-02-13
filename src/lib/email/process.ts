@@ -68,7 +68,7 @@ export async function processInboundEmail(
     }
   }
 
-  // 5. Extract receipt data (images only — PDFs are uploaded but not extracted)
+  // 5. Extract receipt data (images and PDFs)
   let extractedData: {
     merchant: string | null
     amount: string | null
@@ -89,10 +89,10 @@ export async function processInboundEmail(
 
   let didExtract = false
 
-  if (receiptUrl && receiptMimeType && !receiptMimeType.startsWith('application/') && isAnthropicConfigured()) {
+  if (receiptUrl && receiptMimeType && isAnthropicConfigured()) {
     try {
       const categories = await getAvailableCategories()
-      const result = await processReceiptImage(receiptUrl, categories)
+      const result = await processReceiptImage(receiptUrl, categories, receiptMimeType)
       extractedData = {
         merchant: result.merchant,
         amount: result.amount,

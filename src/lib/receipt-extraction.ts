@@ -2,6 +2,8 @@
  * Receipt extraction utilities for category matching and result normalization.
  */
 
+import Anthropic from '@anthropic-ai/sdk'
+
 import {
   createAnthropicClient,
   mapConfidence,
@@ -181,49 +183,62 @@ export function normalizeExtractionResult(
 }
 
 /**
- * Process a receipt image using Claude Vision.
+ * Process a receipt image or PDF using Claude Vision.
  * Returns extracted data with confidence scores.
  */
 export async function processReceiptImage(
   imageUrl: string,
-  availableCategories: Category[]
+  availableCategories: Category[],
+  mimeType?: string
 ): Promise<ReceiptExtractionResult> {
   const client = createAnthropicClient()
 
-  // Fetch image and convert to base64
+  // Fetch receipt and convert to base64
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), PROCESSING_TIMEOUT_MS)
 
   try {
-    // Fetch the image
-    const imageResponse = await fetch(imageUrl, { signal: controller.signal })
-    if (!imageResponse.ok) {
-      throw new AnthropicError(`Failed to fetch image: ${imageResponse.status}`, 'UNREADABLE')
+    const response = await fetch(imageUrl, { signal: controller.signal })
+    if (!response.ok) {
+      throw new AnthropicError(`Failed to fetch receipt: ${response.status}`, 'UNREADABLE')
     }
 
-    const imageBuffer = await imageResponse.arrayBuffer()
-    const base64Image = Buffer.from(imageBuffer).toString('base64')
+    const buffer = await response.arrayBuffer()
+    const base64Data = Buffer.from(buffer).toString('base64')
 
-    // Determine media type
-    const contentType = imageResponse.headers.get('content-type') || 'image/jpeg'
-    const mediaType = contentType.split(';')[0].trim() as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+    // Determine media type from explicit param, response header, or URL extension
+    const contentType = mimeType || response.headers.get('content-type') || 'image/jpeg'
+    const mediaType = contentType.split(';')[0].trim()
+    const isPdf = mediaType === 'application/pdf'
 
-    // Call Claude Vision
-    const response = await client.messages.create({
+    // Build the content block: document for PDFs, image for everything else
+    const contentBlock: Anthropic.Messages.ContentBlockParam = isPdf
+      ? {
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: base64Data,
+          },
+        }
+      : {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: base64Data,
+          },
+        }
+
+    // Call Claude
+    const apiResponse = await client.messages.create({
       model: RECEIPT_MODEL,
       max_tokens: 1024,
       messages: [
         {
           role: 'user',
           content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64Image,
-              },
-            },
+            contentBlock,
             {
               type: 'text',
               text: RECEIPT_EXTRACTION_PROMPT,
@@ -234,7 +249,7 @@ export async function processReceiptImage(
     })
 
     // Extract text content
-    const textContent = response.content.find((block) => block.type === 'text')
+    const textContent = apiResponse.content.find((block) => block.type === 'text')
     if (!textContent || textContent.type !== 'text') {
       throw new AnthropicError('No text response from Claude', 'UNREADABLE')
     }
