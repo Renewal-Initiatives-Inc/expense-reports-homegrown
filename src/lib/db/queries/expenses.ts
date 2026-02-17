@@ -24,6 +24,14 @@ export async function getExpensesByReportId(reportId: string, userId: string): P
 }
 
 /**
+ * Get all expenses for a report (admin — no user auth check).
+ */
+export async function getExpensesByReportIdAdmin(reportId: string): Promise<Expense[]> {
+  const results = await db.select().from(expenses).where(eq(expenses.reportId, reportId)).orderBy(expenses.date)
+  return results.map(mapExpenseRow)
+}
+
+/**
  * Get a single expense by ID with authorization check.
  */
 export async function getExpenseById(id: string, userId: string): Promise<Expense | null> {
@@ -82,6 +90,11 @@ export async function createExpense(
       projectId: input.projectId || null,
       projectName: input.projectName || null,
       billable: input.billable || false,
+      // Financial system integration
+      fundId: input.fundId ?? null,
+      glAccountId: input.glAccountId ?? null,
+      fundName: input.fundName || null,
+      glAccountName: input.glAccountName || null,
       receiptUrl: input.receiptUrl || null,
       receiptThumbnailUrl: input.receiptThumbnailUrl || null,
       // Mileage-specific fields
@@ -137,6 +150,11 @@ export async function updateExpense(id: string, userId: string, input: UpdateExp
   if (input.projectId !== undefined) updateData.projectId = input.projectId
   if (input.projectName !== undefined) updateData.projectName = input.projectName
   if (input.billable !== undefined) updateData.billable = input.billable
+  // Financial system integration
+  if (input.fundId !== undefined) updateData.fundId = input.fundId
+  if (input.glAccountId !== undefined) updateData.glAccountId = input.glAccountId
+  if (input.fundName !== undefined) updateData.fundName = input.fundName
+  if (input.glAccountName !== undefined) updateData.glAccountName = input.glAccountName
   if (input.receiptUrl !== undefined) updateData.receiptUrl = input.receiptUrl
   if (input.receiptThumbnailUrl !== undefined) updateData.receiptThumbnailUrl = input.receiptThumbnailUrl
   // Mileage-specific fields
@@ -331,6 +349,10 @@ function mapExpenseRow(row: typeof expenses.$inferSelect): Expense {
     projectId: row.projectId,
     projectName: row.projectName,
     billable: row.billable ?? false,
+    fundId: row.fundId,
+    glAccountId: row.glAccountId,
+    fundName: row.fundName,
+    glAccountName: row.glAccountName,
     receiptUrl: row.receiptUrl,
     receiptThumbnailUrl: row.receiptThumbnailUrl,
     originAddress: row.originAddress,

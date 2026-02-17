@@ -1,4 +1,5 @@
 import { ExpensesSection } from '@/components/expenses/expenses-section'
+import { FinancialStatusCard } from '@/components/reports/financial-status-card'
 import { ReopenReportButton } from '@/components/reports/reopen-report-button'
 import { SubmitReportButton } from '@/components/reports/submit-report-button'
 import { Button } from '@/components/ui/button'
@@ -111,6 +112,8 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
           </dl>
         </CardContent>
       </Card>
+
+      {report.status === 'approved' && <FinancialStatusCard reportId={report.id} />}
 
       <ExpensesSection reportId={report.id} reportStatus={report.status} />
     </div>

@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useCategories } from './use-categories'
+import { useGLAccounts } from './use-gl-accounts'
 import type { ReceiptExtractionResult } from '@/lib/receipt-extraction'
 
 export type ReceiptProcessingErrorCode = 'UNREADABLE' | 'TIMEOUT' | 'API_ERROR' | 'VALIDATION_ERROR' | 'NO_API_KEY'
@@ -20,7 +20,7 @@ interface UseReceiptProcessingResult {
 }
 
 export function useReceiptProcessing(): UseReceiptProcessingResult {
-  const { categories } = useCategories()
+  const { accounts } = useGLAccounts()
   const [isProcessing, setIsProcessing] = useState(false)
   const [result, setResult] = useState<ReceiptExtractionResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +41,7 @@ export function useReceiptProcessing(): UseReceiptProcessingResult {
           },
           body: JSON.stringify({
             receiptUrl,
-            categories: categories.map((c) => ({ id: c.id, name: c.name })),
+            categories: accounts.map((a) => ({ id: a.id, name: a.name })),
           }),
         })
 
@@ -61,7 +61,7 @@ export function useReceiptProcessing(): UseReceiptProcessingResult {
         setIsProcessing(false)
       }
     },
-    [categories]
+    [accounts]
   )
 
   const reset = useCallback(() => {

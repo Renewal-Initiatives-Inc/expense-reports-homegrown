@@ -1,7 +1,9 @@
 import { auth } from '@/lib/auth'
+import { getExpensesByReportId } from '@/lib/db/queries/expenses'
 import { notifyReportSubmitted } from '@/lib/db/queries/notifications'
 import { submitReport } from '@/lib/db/queries/reports'
 import { getAdminUserIds } from '@/lib/db/queries/users'
+import { validateReportCompliance } from '@/lib/validations/compliance'
 import { NextResponse } from 'next/server'
 
 interface RouteParams {
@@ -17,6 +19,21 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params
+
+    // Run IRS compliance checks before submitting
+    const expenses = await getExpensesByReportId(id, session.user.id)
+    const compliance = validateReportCompliance(expenses)
+
+    if (!compliance.valid) {
+      return NextResponse.json(
+        {
+          error: 'Report has compliance violations that must be resolved before submission',
+          violations: compliance.violations,
+        },
+        { status: 422 }
+      )
+    }
+
     const report = await submitReport(id, session.user.id)
 
     // Notify all admins about the new submission

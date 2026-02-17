@@ -212,7 +212,8 @@ export default function AdminReportDetailPage() {
                   <TableHead className="w-[50px]">Type</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead>GL Account</TableHead>
+                  <TableHead>Fund</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="w-[80px]">Receipt</TableHead>
                 </TableRow>
@@ -237,7 +238,8 @@ export default function AdminReportDetailPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{expense.categoryName || '-'}</TableCell>
+                    <TableCell>{expense.glAccountName || expense.categoryName || '-'}</TableCell>
+                    <TableCell>{expense.fundName || '-'}</TableCell>
                     <TableCell className="text-right font-medium">
                       ${parseFloat(expense.amount || '0').toFixed(2)}
                     </TableCell>

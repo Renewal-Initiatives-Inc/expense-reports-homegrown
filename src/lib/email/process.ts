@@ -1,13 +1,11 @@
 import { isAnthropicConfigured } from '@/lib/anthropic'
 import { uploadEmailAttachment, uploadEmailHtml } from '@/lib/blob'
-import { EXPENSE_CATEGORIES } from '@/lib/categories'
+import { getCachedAccounts } from '@/lib/db/queries/reference-data'
 import { checkDuplicateExpense, createEmailExpense, getExpenseByEmailMessageId } from '@/lib/db/queries/expenses'
 import { createNotification } from '@/lib/db/queries/notifications'
-import { getCachedData } from '@/lib/db/queries/qbo-cache'
 import { findOrCreateEmailedReceiptsReport } from '@/lib/db/queries/reports'
 import { getUserByAnyEmail } from '@/lib/db/queries/users'
 import { processReceiptImage, processReceiptText } from '@/lib/receipt-extraction'
-import type { QboCategory } from '@/lib/qbo/types'
 import { getReceiptAttachments, parseMimeEmail } from './parse'
 
 export type ProcessResult =
@@ -196,18 +194,10 @@ export async function processInboundEmail(
 }
 
 /**
- * Get available categories for receipt extraction.
- * Tries QBO cache first, falls back to hardcoded defaults.
+ * Get available GL accounts for receipt extraction matching.
+ * Reads from the financial-system reference data cache.
  */
-async function getAvailableCategories(): Promise<{ id: string; name: string }[]> {
-  try {
-    const cached = await getCachedData<QboCategory[]>('categories')
-    if (cached && cached.length > 0) {
-      return cached.map((c) => ({ id: c.id, name: c.name }))
-    }
-  } catch {
-    // Fall through to defaults
-  }
-
-  return EXPENSE_CATEGORIES.map((c) => ({ id: c.id, name: c.name }))
+async function getAvailableCategories(): Promise<{ id: number; name: string }[]> {
+  const accounts = await getCachedAccounts()
+  return accounts.map((a) => ({ id: a.id, name: a.name }))
 }

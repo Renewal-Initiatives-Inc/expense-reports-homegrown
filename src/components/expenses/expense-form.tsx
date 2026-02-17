@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { useCategories } from '@/hooks/use-categories'
-import { useProjects } from '@/hooks/use-projects'
+import { useFunds } from '@/hooks/use-funds'
+import { useGLAccounts } from '@/hooks/use-gl-accounts'
 import { useReceiptProcessing } from '@/hooks/use-receipt-processing'
 import type { Expense } from '@/types/expenses'
 import { AlertCircle, AlertTriangle, Loader2, Sparkles } from 'lucide-react'
@@ -15,6 +15,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { ReceiptUpload } from './receipt-upload'
+
+const DEFAULT_FUND_ID = 1 // General Fund (Unrestricted)
 
 interface ExpenseFormProps {
   reportId: string
@@ -26,8 +28,8 @@ interface ExpenseFormProps {
 export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const { categories, isLoading: categoriesLoading } = useCategories()
-  const { projects, isLoading: projectsLoading } = useProjects()
+  const { accounts, isLoading: accountsLoading } = useGLAccounts()
+  const { funds, isLoading: fundsLoading } = useFunds()
   const { processReceipt, isProcessing, result: extractionResult, error: extractionError, errorCode, reset: resetExtraction } = useReceiptProcessing()
 
   const isEditMode = !!expense
@@ -35,11 +37,10 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
   // Form state
   const [amount, setAmount] = useState(expense?.amount || '')
   const [date, setDate] = useState(expense?.date || new Date().toISOString().split('T')[0])
-  const [categoryId, setCategoryId] = useState(expense?.categoryId || '')
+  const [glAccountId, setGlAccountId] = useState(expense?.glAccountId?.toString() || '')
+  const [fundId, setFundId] = useState(expense?.fundId?.toString() || DEFAULT_FUND_ID.toString())
   const [merchant, setMerchant] = useState(expense?.merchant || '')
   const [memo, setMemo] = useState(expense?.memo || '')
-  const [projectId, setProjectId] = useState(expense?.projectId || '')
-  const [billable, setBillable] = useState(expense?.billable || false)
   const [receiptUrl, setReceiptUrl] = useState<string | null>(expense?.receiptUrl || null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -51,7 +52,6 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
   // Apply extraction results when they arrive
   useEffect(() => {
     if (extractionResult) {
-      // Populate form with extracted data
       if (extractionResult.amount) {
         setAmount(extractionResult.amount)
       }
@@ -62,15 +62,13 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
         setMerchant(extractionResult.merchant)
       }
       if (extractionResult.suggestedCategoryId) {
-        setCategoryId(extractionResult.suggestedCategoryId)
+        setGlAccountId(extractionResult.suggestedCategoryId)
       }
       if (extractionResult.memo) {
         setMemo(extractionResult.memo)
       }
 
-      // Store confidence scores
       setAiConfidence(extractionResult.confidence)
-
       toast.success('Receipt data extracted - please review the fields')
     }
   }, [extractionResult])
@@ -89,8 +87,8 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
 
   const showLowConfidenceWarning = aiConfidence && hasLowConfidenceFields(aiConfidence)
 
-  const selectedCategory = categories.find((c) => c.id === categoryId)
-  const selectedProject = projects.find((p) => p.id === projectId)
+  const selectedAccount = accounts.find((a) => a.id.toString() === glAccountId)
+  const selectedFund = funds.find((f) => f.id.toString() === fundId)
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -105,12 +103,12 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
       newErrors.date = 'Date is required'
     }
 
-    if (!categoryId) {
-      newErrors.categoryId = 'Category is required'
+    if (!glAccountId) {
+      newErrors.glAccountId = 'GL account is required'
     }
 
-    if (billable && !projectId) {
-      newErrors.billable = 'Project is required when billable is checked'
+    if (!fundId) {
+      newErrors.fundId = 'Funding source is required'
     }
 
     setErrors(newErrors)
@@ -130,13 +128,12 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
           type: 'out_of_pocket' as const,
           amount,
           date,
-          categoryId,
-          categoryName: selectedCategory?.name || '',
+          fundId: parseInt(fundId),
+          fundName: selectedFund?.name || '',
+          glAccountId: parseInt(glAccountId),
+          glAccountName: selectedAccount?.name || '',
           merchant: merchant || undefined,
           memo: memo || undefined,
-          projectId: projectId || undefined,
-          projectName: selectedProject?.name || undefined,
-          billable: projectId ? billable : false,
           receiptUrl: receiptUrl || undefined,
           receiptThumbnailUrl: receiptUrl || undefined,
           aiConfidence: aiConfidence || undefined,
@@ -169,15 +166,7 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
     })
   }
 
-  const handleProjectChange = (value: string) => {
-    setProjectId(value === 'none' ? '' : value)
-    // Clear billable if no project selected
-    if (value === 'none' || !value) {
-      setBillable(false)
-    }
-  }
-
-  if (categoriesLoading || projectsLoading) {
+  if (accountsLoading || fundsLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -245,7 +234,6 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
         <Label>Receipt Image</Label>
         <ReceiptUpload value={receiptUrl} onChange={setReceiptUrl} disabled={isPending || isProcessing} />
 
-        {/* Process Receipt Button */}
         {receiptUrl && !isProcessing && (
           <div className="flex items-center gap-2 mt-2">
             <Button
@@ -307,25 +295,25 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
         {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
       </div>
 
-      {/* Category */}
+      {/* GL Account */}
       <div className="space-y-2">
-        <Label htmlFor="category">
-          Category <span className="text-destructive">*</span>
+        <Label htmlFor="glAccount">
+          GL Account <span className="text-destructive">*</span>
           {aiConfidence?.category !== undefined && <ConfidenceIndicator confidence={aiConfidence.category} />}
         </Label>
-        <Select value={categoryId} onValueChange={setCategoryId} disabled={isPending}>
-          <SelectTrigger className="w-full" data-testid="expense-category">
-            <SelectValue placeholder="Select a category" />
+        <Select value={glAccountId} onValueChange={setGlAccountId} disabled={isPending}>
+          <SelectTrigger className="w-full" data-testid="expense-gl-account">
+            <SelectValue placeholder="Select a GL account" />
           </SelectTrigger>
           <SelectContent>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
+            {accounts.map((account) => (
+              <SelectItem key={account.id} value={account.id.toString()}>
+                {account.code} - {account.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {errors.categoryId && <p className="text-sm text-destructive">{errors.categoryId}</p>}
+        {errors.glAccountId && <p className="text-sm text-destructive">{errors.glAccountId}</p>}
       </div>
 
       {/* Merchant */}
@@ -337,7 +325,7 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
         <Input
           id="merchant"
           type="text"
-          placeholder="e.g., Starbucks"
+          placeholder="e.g., Home Depot"
           value={merchant}
           onChange={(e) => setMerchant(e.target.value)}
           maxLength={200}
@@ -351,7 +339,7 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
         <Label htmlFor="memo">Description / Memo</Label>
         <Textarea
           id="memo"
-          placeholder="Optional notes about this expense"
+          placeholder="Business purpose of this expense"
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
           maxLength={500}
@@ -361,42 +349,25 @@ export function ExpenseForm({ reportId, expense, onSuccess, onCancel }: ExpenseF
         />
       </div>
 
-      {/* Project */}
+      {/* Funding Source */}
       <div className="space-y-2">
-        <Label htmlFor="project">Project</Label>
-        <Select value={projectId || 'none'} onValueChange={handleProjectChange} disabled={isPending}>
-          <SelectTrigger className="w-full" data-testid="expense-project">
-            <SelectValue placeholder="Select a project (optional)" />
+        <Label htmlFor="fund">
+          Funding Source <span className="text-destructive">*</span>
+        </Label>
+        <Select value={fundId} onValueChange={setFundId} disabled={isPending}>
+          <SelectTrigger className="w-full" data-testid="expense-fund">
+            <SelectValue placeholder="Select a funding source" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">No project</SelectItem>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
+            {funds.map((fund) => (
+              <SelectItem key={fund.id} value={fund.id.toString()}>
+                {fund.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {errors.fundId && <p className="text-sm text-destructive">{errors.fundId}</p>}
       </div>
-
-      {/* Billable - only show when project selected */}
-      {projectId && (
-        <div className="flex items-center gap-2">
-          <input
-            id="billable"
-            type="checkbox"
-            checked={billable}
-            onChange={(e) => setBillable(e.target.checked)}
-            disabled={isPending}
-            className="h-4 w-4 rounded border-gray-300"
-            data-testid="expense-billable"
-          />
-          <Label htmlFor="billable" className="font-normal">
-            Mark as billable to client
-          </Label>
-        </div>
-      )}
-      {errors.billable && <p className="text-sm text-destructive">{errors.billable}</p>}
 
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-4">

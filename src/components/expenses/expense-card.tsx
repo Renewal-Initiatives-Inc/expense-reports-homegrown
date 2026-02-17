@@ -149,15 +149,15 @@ export function ExpenseCard({ expense, canModify, onEdit, onDelete, onViewReceip
                   Mileage
                 </Badge>
               ) : (
-                expense.categoryName && (
-                  <Badge variant="secondary" className="text-xs" data-testid="expense-category">
-                    {expense.categoryName}
+                (expense.glAccountName || expense.categoryName) && (
+                  <Badge variant="secondary" className="text-xs" data-testid="expense-gl-account">
+                    {expense.glAccountName || expense.categoryName}
                   </Badge>
                 )
               )}
-              {expense.projectName && (
-                <Badge variant="outline" className="text-xs" data-testid="expense-project">
-                  {expense.projectName}
+              {(expense.fundName || expense.projectName) && (
+                <Badge variant="outline" className="text-xs" data-testid="expense-fund">
+                  {expense.fundName || expense.projectName}
                 </Badge>
               )}
               {expense.billable && (

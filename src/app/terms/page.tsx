@@ -30,7 +30,7 @@ export default function TermsOfServicePage() {
             The Application is an internal expense management system for Renewal Initiatives
             employees. It allows users to submit expense reports for out-of-pocket purchases
             and mileage reimbursement, which are then routed through an approval workflow
-            and synced to QuickBooks Online.
+            and submitted to the financial system for GL posting and payment.
           </p>
         </section>
 
@@ -56,16 +56,15 @@ export default function TermsOfServicePage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">5. QuickBooks Online Integration</h2>
+          <h2 className="text-xl font-semibold mb-4">5. Financial System Integration</h2>
           <p className="mb-4">
-            The Application integrates with QuickBooks Online (QBO) to sync expense data.
+            The Application integrates with our financial system to process approved expense reports.
             By using this Application, you acknowledge that:
           </p>
           <ul className="list-disc list-inside mb-4">
-            <li>Approved expense reports will be created as bills in QBO</li>
-            <li>Your expense data will be visible to users with QBO access</li>
-            <li>Categories and projects are sourced from QBO and may change</li>
-            <li>QBO integration is managed by administrators</li>
+            <li>Approved expense reports are submitted for GL posting and payment processing</li>
+            <li>GL accounts and funding sources are managed centrally by administrators</li>
+            <li>Expense data is shared with the financial system upon approval</li>
           </ul>
         </section>
 
@@ -97,7 +96,7 @@ export default function TermsOfServicePage() {
             To the maximum extent permitted by law, Renewal Initiatives shall not be liable
             for any indirect, incidental, special, consequential, or punitive damages resulting
             from your use of the Application, including but not limited to errors in expense
-            calculations, data loss, or QBO sync failures.
+            calculations, data loss, or integration failures.
           </p>
         </section>
 

@@ -17,7 +17,8 @@ import {
 
 /**
  * Category synonyms for fuzzy matching.
- * Maps QBO-style category names to related terms that Claude might return.
+ * Maps GL account names to related terms that Claude might return.
+ * TODO: Phase 4 — update to match financial-system GL account names.
  */
 const CATEGORY_SYNONYMS: Record<string, string[]> = {
   'property taxes': ['tax', 'pilot', 'assessment'],
@@ -44,8 +45,8 @@ const CATEGORY_SYNONYMS: Record<string, string[]> = {
   'other operating costs': ['other', 'miscellaneous', 'misc', 'general'],
 }
 
-interface Category {
-  id: string
+export interface Category {
+  id: string | number
   name: string
 }
 
@@ -74,7 +75,7 @@ export function matchCategory(
   for (const category of availableCategories) {
     if (category.name.toLowerCase() === hint) {
       return {
-        id: category.id,
+        id: String(category.id),
         name: category.name,
         confidence: baseConfidence,
       }
@@ -86,7 +87,7 @@ export function matchCategory(
     const catName = category.name.toLowerCase()
     if (catName.includes(hint) || hint.includes(catName)) {
       return {
-        id: category.id,
+        id: String(category.id),
         name: category.name,
         confidence: Math.max(0.5, baseConfidence - 0.1),
       }
@@ -103,7 +104,7 @@ export function matchCategory(
       if (catName.includes(synonymKey) || synonymKey.includes(catName)) {
         if (synonyms.some((s) => hint.includes(s) || s.includes(hint))) {
           return {
-            id: category.id,
+            id: String(category.id),
             name: category.name,
             confidence: Math.max(0.4, baseConfidence - 0.2),
           }

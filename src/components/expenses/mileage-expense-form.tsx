@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { AddressAutocomplete } from '@/components/ui/address-autocomplete'
-import { useProjects } from '@/hooks/use-projects'
+import { useFunds } from '@/hooks/use-funds'
 import type { Expense } from '@/types/expenses'
 import { AlertCircle, Calculator, Loader2, MapPin, Plus, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { toast } from 'sonner'
+
+const DEFAULT_FUND_ID = 1 // General Fund (Unrestricted)
 
 interface MileageExpenseFormProps {
   reportId: string
@@ -35,7 +37,7 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isCalculating, setIsCalculating] = useState(false)
-  const { projects, isLoading: projectsLoading } = useProjects()
+  const { funds, isLoading: fundsLoading } = useFunds()
 
   const isEditMode = !!expense
 
@@ -47,14 +49,22 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
   const [miles, setMiles] = useState(expense?.miles || '')
   const [amount, setAmount] = useState(expense?.amount ? parseFloat(expense.amount).toFixed(2) : '')
   const [memo, setMemo] = useState(expense?.memo || '')
-  const [projectId, setProjectId] = useState(expense?.projectId || '')
-  const [billable, setBillable] = useState(expense?.billable || false)
+  const [fundId, setFundId] = useState(expense?.fundId?.toString() || DEFAULT_FUND_ID.toString())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [manualOverride, setManualOverride] = useState(false)
   const [calculatedMiles, setCalculatedMiles] = useState<number | null>(null)
   const [currentRate, setCurrentRate] = useState<number | null>(null)
+  const [irsRate, setIrsRate] = useState<{ rate: number; effectiveDate: string } | null>(null)
 
-  const selectedProject = projects.find((p) => p.id === projectId)
+  // Fetch current IRS mileage rate for display
+  useEffect(() => {
+    fetch('/api/settings/mileage-rate')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { if (data?.rate) setIrsRate(data) })
+      .catch(() => {})
+  }, [])
+
+  const selectedFund = funds.find((f) => f.id.toString() === fundId)
 
   const canCalculate = originAddress.length >= 5 && destinationAddress.length >= 5
 
@@ -84,8 +94,8 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
       newErrors.amount = 'Amount must be calculated'
     }
 
-    if (billable && !projectId) {
-      newErrors.billable = 'Project is required when billable is checked'
+    if (!fundId) {
+      newErrors.fundId = 'Funding source is required'
     }
 
     setErrors(newErrors)
@@ -122,7 +132,6 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
       setCurrentRate(result.rate)
       setManualOverride(false)
 
-      // Update addresses with formatted versions
       setOriginAddress(result.formatted.origin)
       setDestinationAddress(result.formatted.destination)
 
@@ -143,7 +152,6 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
       setManualOverride(true)
     }
 
-    // Recalculate amount if we have a rate
     if (currentRate && value) {
       const milesNum = parseFloat(value)
       if (!isNaN(milesNum)) {
@@ -169,9 +177,8 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
           miles: parseFloat(miles),
           amount: parseFloat(amount),
           memo: memo || undefined,
-          projectId: projectId || undefined,
-          projectName: selectedProject?.name || undefined,
-          billable: projectId ? billable : false,
+          fundId: parseInt(fundId),
+          fundName: selectedFund?.name || '',
         }
 
         const url = isEditMode ? `/api/reports/${reportId}/expenses/${expense.id}` : `/api/reports/${reportId}/expenses`
@@ -201,13 +208,6 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
     })
   }
 
-  const handleProjectChange = (value: string) => {
-    setProjectId(value === 'none' ? '' : value)
-    if (value === 'none' || !value) {
-      setBillable(false)
-    }
-  }
-
   const addWaypoint = () => {
     setWaypoints([...waypoints, ''])
   }
@@ -222,7 +222,7 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
     setWaypoints(newWaypoints)
   }
 
-  if (projectsLoading) {
+  if (fundsLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -327,6 +327,11 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
         )}
       </Button>
       {errors.calculation && <p className="text-sm text-destructive">{errors.calculation}</p>}
+      {irsRate && !currentRate && (
+        <p className="text-sm text-muted-foreground">
+          Current IRS mileage rate: ${irsRate.rate.toFixed(2)}/mile (effective {new Date(irsRate.effectiveDate).toLocaleDateString()})
+        </p>
+      )}
 
       {/* Miles and Amount (shown after calculation or for edit) */}
       {(miles || isEditMode) && (
@@ -373,7 +378,7 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
         <Label htmlFor="memo">Trip Purpose / Memo</Label>
         <Textarea
           id="memo"
-          placeholder="e.g., Client meeting at downtown office"
+          placeholder="e.g., Site visit to Easthampton property"
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
           maxLength={500}
@@ -383,42 +388,25 @@ export function MileageExpenseForm({ reportId, expense, onSuccess, onCancel }: M
         />
       </div>
 
-      {/* Project */}
+      {/* Funding Source */}
       <div className="space-y-2">
-        <Label htmlFor="project">Project</Label>
-        <Select value={projectId || 'none'} onValueChange={handleProjectChange} disabled={isPending}>
-          <SelectTrigger className="w-full" data-testid="mileage-project">
-            <SelectValue placeholder="Select a project (optional)" />
+        <Label htmlFor="fund">
+          Funding Source <span className="text-destructive">*</span>
+        </Label>
+        <Select value={fundId} onValueChange={setFundId} disabled={isPending}>
+          <SelectTrigger className="w-full" data-testid="mileage-fund">
+            <SelectValue placeholder="Select a funding source" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">No project</SelectItem>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
+            {funds.map((fund) => (
+              <SelectItem key={fund.id} value={fund.id.toString()}>
+                {fund.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {errors.fundId && <p className="text-sm text-destructive">{errors.fundId}</p>}
       </div>
-
-      {/* Billable - only show when project selected */}
-      {projectId && (
-        <div className="flex items-center gap-2">
-          <input
-            id="billable"
-            type="checkbox"
-            checked={billable}
-            onChange={(e) => setBillable(e.target.checked)}
-            disabled={isPending}
-            className="h-4 w-4 rounded border-gray-300"
-            data-testid="mileage-billable"
-          />
-          <Label htmlFor="billable" className="font-normal">
-            Mark as billable to client
-          </Label>
-        </div>
-      )}
-      {errors.billable && <p className="text-sm text-destructive">{errors.billable}</p>}
 
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-4">

@@ -14,6 +14,11 @@ export interface Expense {
   projectId: string | null
   projectName: string | null
   billable: boolean
+  // Financial system integration
+  fundId: number | null
+  glAccountId: number | null
+  fundName: string | null
+  glAccountName: string | null
   receiptUrl: string | null
   receiptThumbnailUrl: string | null
   originAddress: string | null
@@ -40,6 +45,11 @@ export interface CreateExpenseInput {
   projectId?: string
   projectName?: string
   billable?: boolean
+  // Financial system integration
+  fundId?: number
+  glAccountId?: number
+  fundName?: string
+  glAccountName?: string
   receiptUrl?: string
   receiptThumbnailUrl?: string
   // Mileage-specific fields
@@ -60,6 +70,11 @@ export interface UpdateExpenseInput {
   projectId?: string
   projectName?: string
   billable?: boolean
+  // Financial system integration
+  fundId?: number | null
+  glAccountId?: number | null
+  fundName?: string | null
+  glAccountName?: string | null
   receiptUrl?: string
   receiptThumbnailUrl?: string
   // Mileage-specific fields

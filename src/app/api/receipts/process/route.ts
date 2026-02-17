@@ -16,7 +16,7 @@ const requestSchema = z.object({
   categories: z
     .array(
       z.object({
-        id: z.string(),
+        id: z.union([z.string(), z.number()]),
         name: z.string(),
       })
     )

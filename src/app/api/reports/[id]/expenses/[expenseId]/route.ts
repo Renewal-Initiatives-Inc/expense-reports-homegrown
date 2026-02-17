@@ -52,6 +52,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     if (data.date !== undefined) updateInput.date = data.date
     if (data.memo !== undefined) updateInput.memo = data.memo
+    if (data.fundId !== undefined) updateInput.fundId = data.fundId
+    if (data.fundName !== undefined) updateInput.fundName = data.fundName
+    if (data.glAccountId !== undefined) updateInput.glAccountId = data.glAccountId
+    if (data.glAccountName !== undefined) updateInput.glAccountName = data.glAccountName
     if (data.projectId !== undefined) updateInput.projectId = data.projectId
     if (data.projectName !== undefined) updateInput.projectName = data.projectName
     if (data.billable !== undefined) updateInput.billable = data.billable

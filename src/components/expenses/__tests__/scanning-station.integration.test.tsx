@@ -35,13 +35,13 @@ vi.mock('@/lib/camera-utils', () => ({
   isCameraSupported: vi.fn(() => true),
 }))
 
-// Mock categories hook
-vi.mock('@/hooks/use-categories', () => ({
-  useCategories: vi.fn(() => ({
-    categories: [
-      { id: 'meals', name: 'Meals' },
-      { id: 'travel', name: 'Travel' },
-      { id: 'supplies', name: 'Office Supplies' },
+// Mock GL accounts hook
+vi.mock('@/hooks/use-gl-accounts', () => ({
+  useGLAccounts: vi.fn(() => ({
+    accounts: [
+      { id: 1, code: '5010', name: 'Office Supplies' },
+      { id: 2, code: '5200', name: 'Travel' },
+      { id: 3, code: '5300', name: 'Meals & Entertainment' },
     ],
     isLoading: false,
   })),

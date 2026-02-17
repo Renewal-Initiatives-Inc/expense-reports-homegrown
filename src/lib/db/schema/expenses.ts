@@ -1,4 +1,4 @@
-import { boolean, date, index, jsonb, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, date, index, integer, jsonb, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { expenseReports } from './expense-reports'
 
 export const expenseTypeEnum = ['out_of_pocket', 'mileage'] as const
@@ -21,6 +21,11 @@ export const expenses = pgTable(
     projectId: text('project_id'),
     projectName: text('project_name'),
     billable: boolean('billable').default(false),
+    // Financial system integration (Phase 3+4)
+    fundId: integer('fund_id'),
+    glAccountId: integer('gl_account_id'),
+    fundName: text('fund_name'),
+    glAccountName: text('gl_account_name'),
     receiptUrl: text('receipt_url'),
     receiptThumbnailUrl: text('receipt_thumbnail_url'),
     originAddress: text('origin_address'),

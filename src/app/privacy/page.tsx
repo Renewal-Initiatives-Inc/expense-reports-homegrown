@@ -45,32 +45,24 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">3. QuickBooks Online Integration</h2>
+          <h2 className="text-xl font-semibold mb-4">3. Financial System Integration</h2>
           <p className="mb-4">
-            This Application connects to QuickBooks Online (QBO) to:
+            This Application connects to our financial system to:
           </p>
           <ul className="list-disc list-inside mb-4">
-            <li>Fetch expense categories from your chart of accounts</li>
-            <li>Fetch project/class information for expense tracking</li>
-            <li>Create bills in QBO for approved expense reports</li>
+            <li>Read GL accounts and funding sources for expense categorization</li>
+            <li>Submit approved expense reports for GL posting and payment processing</li>
           </ul>
 
-          <h3 className="text-lg font-medium mb-2">QBO Data Access</h3>
+          <h3 className="text-lg font-medium mb-2">Data Shared</h3>
           <p className="mb-4">
-            We access the following QBO data:
+            When an expense report is approved, the following data is shared with the financial system:
           </p>
           <ul className="list-disc list-inside mb-4">
-            <li>Chart of Accounts (expense account names and IDs)</li>
-            <li>Classes/Projects (names and IDs)</li>
-            <li>We create Bills in QBO for approved expense reports</li>
+            <li>Expense amounts, dates, and descriptions</li>
+            <li>Selected GL account and funding source per line item</li>
+            <li>Employee identifier for payment processing</li>
           </ul>
-
-          <h3 className="text-lg font-medium mb-2">QBO Token Security</h3>
-          <p>
-            OAuth tokens used to access QuickBooks Online are encrypted using AES-256
-            encryption before storage in our database. Tokens are automatically refreshed
-            before expiration and can be revoked by administrators at any time.
-          </p>
         </section>
 
         <section className="mb-8">
@@ -100,7 +92,6 @@ export default function PrivacyPolicyPage() {
           <p className="mb-4">We use the following third-party services:</p>
           <ul className="list-disc list-inside mb-4">
             <li><strong>Zitadel</strong> - Authentication (SSO)</li>
-            <li><strong>QuickBooks Online</strong> - Accounting integration</li>
             <li><strong>Anthropic (Claude Vision)</strong> - Receipt data extraction</li>
             <li><strong>Google Maps</strong> - Mileage distance calculation</li>
             <li><strong>Vercel</strong> - Hosting, database, and file storage</li>
@@ -114,9 +105,9 @@ export default function PrivacyPolicyPage() {
           <h2 className="text-xl font-semibold mb-4">7. Access and Sharing</h2>
           <p>
             Your expense data is accessible only to you and administrators of the Application.
-            Approved expense reports are synced to QuickBooks Online where they become visible
-            to users with appropriate QBO permissions. We do not sell or share your personal
-            information with third parties for marketing purposes.
+            Approved expense reports are submitted to our financial system for GL posting and
+            payment processing. We do not sell or share your personal information with third
+            parties for marketing purposes.
           </p>
         </section>
 
