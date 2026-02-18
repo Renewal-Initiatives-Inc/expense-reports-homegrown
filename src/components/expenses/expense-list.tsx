@@ -51,86 +51,82 @@ export function ExpenseList({ expenses, reportId, reportStatus, onEdit, onExpens
       </div>
 
       {/* Expenses Table */}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[40px]">Type</TableHead>
-              <TableHead className="w-[90px]">Date</TableHead>
-              <TableHead className="min-w-[200px]">Description</TableHead>
-              <TableHead className="w-[140px]">GL Account</TableHead>
-              <TableHead className="w-[110px]">Fund</TableHead>
-              <TableHead className="w-[90px] text-right">Amount</TableHead>
-              <TableHead className="w-[60px]">Receipt</TableHead>
-              {canModify && <TableHead className="w-[50px]" />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {expenses.map((expense) => (
-              <TableRow key={expense.id} data-testid={`expense-row-${expense.id}`}>
-                <TableCell>
-                  {expense.type === 'mileage' ? (
-                    <Car className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Receipt className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">{new Date(expense.date).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="max-w-md">
-                    <p className="font-medium">{expense.merchant || '-'}</p>
-                    {expense.memo && <p className="text-sm text-muted-foreground break-words">{expense.memo}</p>}
-                    {expense.type === 'mileage' && expense.miles && (
-                      <p className="text-sm text-muted-foreground">{expense.miles} miles</p>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>{expense.glAccountName || expense.categoryName || '-'}</TableCell>
-                <TableCell>{expense.fundName || '-'}</TableCell>
-                <TableCell className="text-right font-medium whitespace-nowrap">
-                  ${parseFloat(expense.amount || '0').toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  {expense.receiptUrl ? (
-                    <a
-                      href={expense.receiptUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      View
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                {canModify && (
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="expense-actions">
-                          <MoreVertical className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEdit(expense)} data-testid="edit-expense">
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setExpenseToDelete(expense)} className="text-destructive" data-testid="delete-expense">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+      <Table className="table-fixed">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[40px]">Type</TableHead>
+            <TableHead className="w-[80px]">Date</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="w-[130px]">GL Account</TableHead>
+            <TableHead className="w-[100px]">Fund</TableHead>
+            <TableHead className="w-[80px] text-right">Amount</TableHead>
+            <TableHead className="w-[60px]">Receipt</TableHead>
+            {canModify && <TableHead className="w-[50px]" />}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {expenses.map((expense) => (
+            <TableRow key={expense.id} data-testid={`expense-row-${expense.id}`}>
+              <TableCell>
+                {expense.type === 'mileage' ? (
+                  <Car className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Receipt className="h-4 w-4 text-muted-foreground" />
                 )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+              </TableCell>
+              <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+              <TableCell className="whitespace-normal">
+                <p className="font-medium">{expense.merchant || '-'}</p>
+                {expense.memo && <p className="text-sm text-muted-foreground">{expense.memo}</p>}
+                {expense.type === 'mileage' && expense.miles && (
+                  <p className="text-sm text-muted-foreground">{expense.miles} miles</p>
+                )}
+              </TableCell>
+              <TableCell className="whitespace-normal">{expense.glAccountName || expense.categoryName || '-'}</TableCell>
+              <TableCell className="whitespace-normal">{expense.fundName || '-'}</TableCell>
+              <TableCell className="text-right font-medium">
+                ${parseFloat(expense.amount || '0').toFixed(2)}
+              </TableCell>
+              <TableCell>
+                {expense.receiptUrl ? (
+                  <a
+                    href={expense.receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    View
+                  </a>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              {canModify && (
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="expense-actions">
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onEdit(expense)} data-testid="edit-expense">
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setExpenseToDelete(expense)} className="text-destructive" data-testid="delete-expense">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
       {/* Delete Confirmation Dialog */}
       <ExpenseDeleteDialog
