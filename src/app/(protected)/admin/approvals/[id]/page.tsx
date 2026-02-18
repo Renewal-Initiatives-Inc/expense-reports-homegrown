@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { Expense } from '@/types/expenses'
 import type { ExpenseReport } from '@/types/reports'
 import { ArrowLeft, Car, Check, Loader2, Receipt, X } from 'lucide-react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -206,71 +205,63 @@ export default function AdminReportDetailPage() {
               <p className="text-muted-foreground">No expenses</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">Type</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>GL Account</TableHead>
-                  <TableHead>Fund</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="w-[80px]">Receipt</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.map((expense) => (
-                  <TableRow key={expense.id} data-testid={`expense-row-${expense.id}`}>
-                    <TableCell>
-                      {expense.type === 'mileage' ? (
-                        <Car className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Receipt className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </TableCell>
-                    <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{expense.merchant || '-'}</p>
-                        {expense.memo && <p className="text-sm text-muted-foreground">{expense.memo}</p>}
-                        {expense.type === 'mileage' && expense.miles && (
-                          <p className="text-sm text-muted-foreground">{expense.miles} miles</p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{expense.glAccountName || expense.categoryName || '-'}</TableCell>
-                    <TableCell>{expense.fundName || '-'}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${parseFloat(expense.amount || '0').toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      {expense.receiptThumbnailUrl ? (
-                        <a href={expense.receiptUrl || '#'} target="_blank" rel="noopener noreferrer">
-                          <Image
-                            src={expense.receiptThumbnailUrl}
-                            alt="Receipt"
-                            width={40}
-                            height={40}
-                            className="rounded border object-cover"
-                          />
-                        </a>
-                      ) : expense.receiptUrl ? (
-                        <a
-                          href={expense.receiptUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          View
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40px]">Type</TableHead>
+                    <TableHead className="w-[90px]">Date</TableHead>
+                    <TableHead className="min-w-[200px]">Description</TableHead>
+                    <TableHead className="w-[140px]">GL Account</TableHead>
+                    <TableHead className="w-[110px]">Fund</TableHead>
+                    <TableHead className="w-[90px] text-right">Amount</TableHead>
+                    <TableHead className="w-[60px]">Receipt</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {expenses.map((expense) => (
+                    <TableRow key={expense.id} data-testid={`expense-row-${expense.id}`}>
+                      <TableCell>
+                        {expense.type === 'mileage' ? (
+                          <Car className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Receipt className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">{new Date(expense.date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="max-w-md">
+                          <p className="font-medium">{expense.merchant || '-'}</p>
+                          {expense.memo && <p className="text-sm text-muted-foreground break-words">{expense.memo}</p>}
+                          {expense.type === 'mileage' && expense.miles && (
+                            <p className="text-sm text-muted-foreground">{expense.miles} miles</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{expense.glAccountName || expense.categoryName || '-'}</TableCell>
+                      <TableCell>{expense.fundName || '-'}</TableCell>
+                      <TableCell className="text-right font-medium whitespace-nowrap">
+                        ${parseFloat(expense.amount || '0').toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        {expense.receiptUrl ? (
+                          <a
+                            href={expense.receiptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            View
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

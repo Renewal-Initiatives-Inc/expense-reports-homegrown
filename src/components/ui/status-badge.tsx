@@ -17,7 +17,7 @@ const statusConfig: Record<ReportStatus, { label: string; className: string }> =
   },
   approved: {
     label: 'Approved',
-    className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    className: 'bg-green-600 text-white dark:bg-green-600 dark:text-white',
   },
   rejected: {
     label: 'Rejected',
