@@ -8,7 +8,7 @@ export default auth((req) => {
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' blob: data: https://*.public.blob.vercel-storage.com`,
     `font-src 'self'`,
-    `connect-src 'self' https://*.zitadel.cloud`,
+    `connect-src 'self' https://*.zitadel.cloud https://*.public.blob.vercel-storage.com`,
     `frame-src 'none'`,
     `worker-src 'self' blob:`,
     `object-src 'none'`,
