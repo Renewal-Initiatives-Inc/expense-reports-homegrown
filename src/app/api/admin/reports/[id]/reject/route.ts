@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth'
 import { requireAdmin } from '@/lib/auth-utils'
+import { db } from '@/lib/db'
+import { logAuditEvent, AUDIT_ACTIONS } from '@/lib/db/queries/audit'
 import { notifyReportRejected } from '@/lib/db/queries/notifications'
 import { rejectReport } from '@/lib/db/queries/reports'
 import { rejectReportSchema } from '@/lib/validations/reports'
@@ -28,6 +30,15 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const report = await rejectReport(id, session.user!.id, validationResult.data.comment)
+
+    await logAuditEvent(db, {
+      userId: session.user!.id,
+      userEmail: session.user!.email,
+      action: AUDIT_ACTIONS.REJECTED,
+      entityType: 'expense_report',
+      entityId: id,
+      afterState: { name: report.name, status: 'rejected', reviewerId: session.user!.id, comment: validationResult.data.comment },
+    })
 
     // Create notification for the submitter
     try {

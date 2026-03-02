@@ -3,6 +3,8 @@
  */
 
 import { del, put } from '@vercel/blob'
+import DOMPurify from 'isomorphic-dompurify'
+import { validateMagicBytes } from './upload-validation'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic']
 const EMAIL_ALLOWED_TYPES = [...ALLOWED_TYPES, 'application/pdf']
@@ -39,6 +41,14 @@ export function validateFile(file: File): void {
 export async function uploadReceipt(file: File): Promise<UploadResult> {
   validateFile(file)
 
+  // Validate magic bytes (skip HEIC — no standard magic byte check)
+  if (file.type !== 'image/heic') {
+    const buffer = await file.arrayBuffer()
+    if (!validateMagicBytes(buffer, file.type)) {
+      throw new BlobUploadError(`File content does not match declared type: ${file.type}`)
+    }
+  }
+
   const timestamp = Date.now()
   const extension = file.name.split('.').pop() || 'jpg'
   const filename = `receipts/${timestamp}-${crypto.randomUUID()}.${extension}`
@@ -72,6 +82,13 @@ export async function uploadEmailAttachment(
     throw new BlobUploadError(`File too large: ${(content.byteLength / 1024 / 1024).toFixed(2)}MB. Maximum size: 10MB`)
   }
 
+  // Validate magic bytes (skip HEIC — no standard magic byte check)
+  if (mimeType !== 'image/heic') {
+    if (!validateMagicBytes(content, mimeType)) {
+      throw new BlobUploadError(`File content does not match declared type: ${mimeType}`)
+    }
+  }
+
   const timestamp = Date.now()
   const extension = filename.split('.').pop() || 'bin'
   const blobPath = `receipts/email/${timestamp}-${crypto.randomUUID()}.${extension}`
@@ -89,12 +106,18 @@ export async function uploadEmailAttachment(
 
 /**
  * Upload an HTML email body as a viewable receipt.
+ * Sanitizes HTML to remove scripts, event handlers, and other XSS vectors.
  */
 export async function uploadEmailHtml(html: string): Promise<UploadResult> {
+  const sanitizedHtml = DOMPurify.sanitize(html, {
+    WHOLE_DOCUMENT: true,
+    ADD_TAGS: ['style'],
+  })
+
   const timestamp = Date.now()
   const blobPath = `receipts/email/${timestamp}-${crypto.randomUUID()}.html`
 
-  const blob = await put(blobPath, html, {
+  const blob = await put(blobPath, sanitizedHtml, {
     access: 'public',
     contentType: 'text/html',
   })

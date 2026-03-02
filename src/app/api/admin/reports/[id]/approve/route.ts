@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { requireAdmin } from '@/lib/auth-utils'
 import { getExpensesByReportIdAdmin } from '@/lib/db/queries/expenses'
+import { logAuditEvent, AUDIT_ACTIONS } from '@/lib/db/queries/audit'
 import { notifyReportApproved } from '@/lib/db/queries/notifications'
 import { approveReport, getReportByIdForAdmin } from '@/lib/db/queries/reports'
 import { submitStagingRecords } from '@/lib/staging/submit'
@@ -60,6 +61,15 @@ export async function POST(request: Request, { params }: RouteParams) {
         { status: 422 }
       )
     }
+
+    await logAuditEvent(db, {
+      userId: session.user!.id,
+      userEmail: session.user!.email,
+      action: AUDIT_ACTIONS.APPROVED,
+      entityType: 'expense_report',
+      entityId: id,
+      afterState: { name: report.name, status: 'approved', reviewerId: session.user!.id, comment: validationResult.data.comment },
+    })
 
     // Create notification for the submitter
     try {
