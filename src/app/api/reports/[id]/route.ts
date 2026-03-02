@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
 import { deleteReport, getReportById, updateReport } from '@/lib/db/queries/reports'
+import { logAuditEvent, AUDIT_ACTIONS } from '@/lib/db/queries/audit'
 import { updateReportSchema } from '@/lib/validations/reports'
 import { NextResponse } from 'next/server'
 
@@ -51,6 +53,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 })
     }
 
+    await logAuditEvent(db, {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: AUDIT_ACTIONS.UPDATED,
+      entityType: 'expense_report',
+      entityId: id,
+      afterState: { name: report.name, status: report.status },
+    })
+
     return NextResponse.json(report)
   } catch (error) {
     if (error instanceof Error && error.message === 'Only open reports can be edited') {
@@ -75,6 +86,14 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     if (!deleted) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 })
     }
+
+    await logAuditEvent(db, {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: AUDIT_ACTIONS.DELETED,
+      entityType: 'expense_report',
+      entityId: id,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

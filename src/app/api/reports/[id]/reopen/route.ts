@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
 import { reopenReport } from '@/lib/db/queries/reports'
+import { logAuditEvent, AUDIT_ACTIONS } from '@/lib/db/queries/audit'
 import { NextResponse } from 'next/server'
 
 interface RouteParams {
@@ -16,6 +18,15 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const { id } = await params
     const report = await reopenReport(id, session.user.id)
+
+    await logAuditEvent(db, {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: AUDIT_ACTIONS.REOPENED,
+      entityType: 'expense_report',
+      entityId: id,
+      afterState: { name: report.name, status: 'open' },
+    })
 
     return NextResponse.json(report)
   } catch (error) {

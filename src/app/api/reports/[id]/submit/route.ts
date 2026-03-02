@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth'
+import { db } from '@/lib/db'
 import { getExpensesByReportId } from '@/lib/db/queries/expenses'
+import { logAuditEvent, AUDIT_ACTIONS } from '@/lib/db/queries/audit'
 import { notifyReportSubmitted } from '@/lib/db/queries/notifications'
 import { submitReport } from '@/lib/db/queries/reports'
 import { getAdminUserIds } from '@/lib/db/queries/users'
@@ -35,6 +37,15 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const report = await submitReport(id, session.user.id)
+
+    await logAuditEvent(db, {
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: AUDIT_ACTIONS.SUBMITTED,
+      entityType: 'expense_report',
+      entityId: id,
+      afterState: { name: report.name, status: 'submitted' },
+    })
 
     // Notify all admins about the new submission
     try {
